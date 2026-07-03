@@ -440,6 +440,44 @@ export default function Dashboard() {
       ),
     }));
 
+  // One-click: set every pair to use the operator's uploaded logo (recoloured
+  // by the current custom variants, in rotation). If no custom variants exist
+  // yet, seed one with an ink fill so the button always does something useful.
+  const applyUploadedLogoToAllPairs = async () => {
+    if (!cfg.logoUploadedSvg) {
+      setLogoUploadError("Upload an SVG first.");
+      return;
+    }
+    setLogoUploadError(null);
+
+    let variants = cfg.logoCustomVariants;
+    if (variants.length === 0) {
+      variants = [
+        { id: `custom-${cryptoRandomId()}`, label: "Ink",   color: "#0a0a0a" },
+        { id: `custom-${cryptoRandomId()}`, label: "Paper", color: "#fafafa" },
+      ];
+    }
+
+    setCfg((prev) => ({
+      ...prev,
+      logoCustomVariants: variants,
+      slides: prev.slides.map((s, i) => ({
+        ...s,
+        logoId: `custom:${variants[i % variants.length].id}`,
+      })),
+    }));
+  };
+
+  // Companion action for reverting.
+  const resetAllPairsToPresetLogo = () =>
+    setCfg((prev) => ({
+      ...prev,
+      slides: prev.slides.map((s, i) => ({
+        ...s,
+        logoId: LOGOS[i % LOGOS.length].id,
+      })),
+    }));
+
   // ── Background upload (IndexedDB) ──────────────────────────────────
   const handleBackgroundUpload = async (files: FileList | null) => {
     setBgUploadError(null);
@@ -1072,6 +1110,32 @@ export default function Dashboard() {
                   </span>
                 )}
               </div>
+
+              {cfg.logoUploadedSvg ? (
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={applyUploadedLogoToAllPairs}
+                    className="inline-flex items-center gap-2 rounded-full bg-[var(--color-ink)] text-[var(--color-paper)] px-5 py-2 text-sm font-medium"
+                  >
+                    Use uploaded logo on all pairs
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                      <path
+                        d="M3 7h8m0 0L7.5 3.5M11 7l-3.5 3.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={resetAllPairsToPresetLogo}
+                    className="inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] px-5 py-2 text-sm hover:bg-[var(--color-line)]/40"
+                  >
+                    Reset all pairs to preset logo
+                  </button>
+                </div>
+              ) : null}
               {logoUploadError ? (
                 <div className="mt-3 text-sm text-red-600" role="alert">
                   {logoUploadError}
