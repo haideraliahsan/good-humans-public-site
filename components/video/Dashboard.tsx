@@ -48,6 +48,17 @@ import {
   measureLeadingSilenceOfUrl,
   measureAudioBlobSeconds,
 } from "@/lib/video/audio";
+import { ingestUploadedSvg, loadPresetSvg, parseSvg } from "@/lib/video/logoSvg";
+import {
+  saveBackgroundBlob,
+  loadBackgroundBlob,
+  deleteBackgroundBlob,
+} from "@/lib/video/assetStore";
+import type {
+  LogoColorVariant,
+  UploadedBackground,
+  UploadedBackgroundUrls,
+} from "@/lib/video/types";
 
 const CONFIG_KEY = "gh_video_config";
 
@@ -89,6 +100,13 @@ export default function Dashboard() {
   // "Start from" slider range so the operator can scrub through the whole track.
   const [musicDurationSec, setMusicDurationSec] = useState<number>(0);
 
+  // Runtime object URLs for uploaded backgrounds, keyed by "upload:<id>".
+  // Rebuilt from IndexedDB on mount; consumed by the composition via renderCfg.
+  const [uploadedBackgroundUrls, setUploadedBackgroundUrls] =
+    useState<UploadedBackgroundUrls>({});
+  const [bgUploadError, setBgUploadError] = useState<string | null>(null);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+
   // Music AI generation state
   const [musicProxyUrl, setMusicProxyUrl] = useState("");
   const [musicProxySecret, setMusicProxySecret] = useState("");
@@ -116,11 +134,29 @@ export default function Dashboard() {
   const playerRef = useRef<PlayerRef>(null);
 
   useEffect(() => {
-    setCfg(safeLoadConfig());
+    const initial = safeLoadConfig();
+    setCfg(initial);
     const proxy = readProxyConfig();
     setMusicProxyUrl(proxy.url);
     setMusicProxySecret(proxy.secret);
     setMounted(true);
+
+    // Hydrate uploaded background blobs from IndexedDB → object URLs
+    (async () => {
+      const map: UploadedBackgroundUrls = {};
+      const created: string[] = [];
+      for (const bg of initial.uploadedBackgrounds) {
+        try {
+          const stored = await loadBackgroundBlob(bg.id);
+          if (stored) {
+            const url = URL.createObjectURL(stored.blob);
+            map[`upload:${bg.id}`] = url;
+            created.push(url);
+          }
+        } catch {}
+      }
+      setUploadedBackgroundUrls(map);
+    })();
   }, []);
 
   useEffect(() => {
@@ -207,6 +243,7 @@ export default function Dashboard() {
     clickUrl: clickUrlLive,
     clickAutoTrimSec,
     musicAutoTrimSec,
+    uploadedBackgroundUrls,
   };
 
   // ── Audio handlers ─────────────────────────────────────────────────
@@ -322,6 +359,146 @@ export default function Dashboard() {
       const msg = e instanceof Error ? e.message : "Click generation failed.";
       setClickGenState({ busy: false, error: msg });
     }
+  };
+
+  // ── Logo upload + variant CRUD ─────────────────────────────────────
+  const handleLogoUpload = async (file: File | null) => {
+    setLogoUploadError(null);
+    if (!file) {
+      setCfg((prev) => ({
+        ...prev,
+        logoUploadedSvg: null,
+        logoUploadedLabel: null,
+      }));
+      return;
+    }
+    const res = await ingestUploadedSvg(file);
+    if (!res.ok) {
+      setLogoUploadError(res.error);
+      return;
+    }
+    setCfg((prev) => ({
+      ...prev,
+      logoUploadedSvg: res.markup,
+      logoUploadedLabel: res.label,
+      // Seed 5 default variants so the operator has something to pick from
+      logoCustomVariants:
+        prev.logoCustomVariants.length > 0
+          ? prev.logoCustomVariants
+          : [
+              { id: `custom-${cryptoRandomId()}`, label: "Ink",   color: "#0a0a0a" },
+              { id: `custom-${cryptoRandomId()}`, label: "Paper", color: "#fafafa" },
+              { id: `custom-${cryptoRandomId()}`, label: "Blue",  color: "#3549E6" },
+              { id: `custom-${cryptoRandomId()}`, label: "Emerald", color: "#22C55E" },
+              { id: `custom-${cryptoRandomId()}`, label: "Magenta", color: "#EC4899" },
+            ],
+    }));
+  };
+
+  const addLogoVariant = async () => {
+    // If the operator hasn't uploaded their own SVG, seed the recolour base
+    // with the default preset SVG so the new variant renders on top of it.
+    if (!cfg.logoUploadedSvg) {
+      try {
+        const text = await loadPresetSvg(logoUrl(LOGOS[0].id));
+        const parsed = parseSvg(text, LOGOS[0].label);
+        if (parsed.ok) {
+          setCfg((prev) => ({
+            ...prev,
+            logoUploadedSvg: parsed.markup,
+            logoUploadedLabel: prev.logoUploadedLabel ?? "Default (preset base)",
+          }));
+        }
+      } catch {}
+    }
+    const id = `custom-${cryptoRandomId()}`;
+    const label = `Variant ${cfg.logoCustomVariants.length + 1}`;
+    setCfg((prev) => ({
+      ...prev,
+      logoCustomVariants: [
+        ...prev.logoCustomVariants,
+        { id, label, color: "#111111" },
+      ],
+    }));
+  };
+
+  const patchLogoVariant = (id: string, patch: Partial<LogoColorVariant>) =>
+    setCfg((prev) => ({
+      ...prev,
+      logoCustomVariants: prev.logoCustomVariants.map((v) =>
+        v.id === id ? { ...v, ...patch } : v,
+      ),
+    }));
+
+  const removeLogoVariant = (id: string) =>
+    setCfg((prev) => ({
+      ...prev,
+      logoCustomVariants: prev.logoCustomVariants.filter((v) => v.id !== id),
+      // Any slide that referenced this variant falls back to the first preset
+      slides: prev.slides.map((s) =>
+        s.logoId === `custom:${id}` ? { ...s, logoId: LOGOS[0].id } : s,
+      ),
+    }));
+
+  // ── Background upload (IndexedDB) ──────────────────────────────────
+  const handleBackgroundUpload = async (files: FileList | null) => {
+    setBgUploadError(null);
+    if (!files || files.length === 0) return;
+    const newEntries: UploadedBackground[] = [];
+    const newUrls: UploadedBackgroundUrls = {};
+    for (const file of Array.from(files)) {
+      if (!/^image\//.test(file.type)) {
+        setBgUploadError("Only image files are supported.");
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setBgUploadError("Each image must be under 10 MB.");
+        continue;
+      }
+      const id = cryptoRandomId();
+      try {
+        await saveBackgroundBlob(id, file, file.name);
+        const url = URL.createObjectURL(file);
+        newUrls[`upload:${id}`] = url;
+        newEntries.push({
+          id,
+          label: file.name.replace(/\.[^.]+$/, ""),
+          originalName: file.name,
+          addedAt: Date.now(),
+        });
+      } catch (e) {
+        setBgUploadError("Failed to save the image. Try a smaller file.");
+      }
+    }
+    if (newEntries.length > 0) {
+      setCfg((prev) => ({
+        ...prev,
+        uploadedBackgrounds: [...prev.uploadedBackgrounds, ...newEntries],
+      }));
+      setUploadedBackgroundUrls((prev) => ({ ...prev, ...newUrls }));
+    }
+  };
+
+  const removeUploadedBackground = async (id: string) => {
+    const key = `upload:${id}`;
+    const url = uploadedBackgroundUrls[key];
+    if (url) URL.revokeObjectURL(url);
+    try {
+      await deleteBackgroundBlob(id);
+    } catch {}
+    setUploadedBackgroundUrls((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    setCfg((prev) => ({
+      ...prev,
+      uploadedBackgrounds: prev.uploadedBackgrounds.filter((bg) => bg.id !== id),
+      // Any slide pointing at this upload falls back to the first preset
+      slides: prev.slides.map((s) =>
+        s.backgroundId === key ? { ...s, backgroundId: BACKGROUNDS[0].id } : s,
+      ),
+    }));
   };
 
   const previewClick = (id: string) => {
@@ -575,6 +752,62 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Uploaded backgrounds mini-panel */}
+            <div className="mb-6 rounded-2xl border border-dashed border-[var(--color-line)] bg-[var(--color-paper)] p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                  Uploaded backgrounds ({cfg.uploadedBackgrounds.length})
+                </div>
+                <label className="inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-white px-4 py-1.5 text-xs cursor-pointer hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] hover:border-[var(--color-ink)]">
+                  + Upload image(s)
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handleBackgroundUpload(e.target.files)}
+                  />
+                </label>
+              </div>
+              {cfg.uploadedBackgrounds.length === 0 ? (
+                <div className="text-xs text-[var(--color-muted)]">
+                  Drop in your own images to use alongside the presets. Kept in your browser only.
+                </div>
+              ) : (
+                <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  {cfg.uploadedBackgrounds.map((bg) => {
+                    const url = uploadedBackgroundUrls[`upload:${bg.id}`];
+                    return (
+                      <li key={bg.id} className="relative aspect-square rounded-xl overflow-hidden border border-[var(--color-line)] bg-black">
+                        {url ? (
+                          <img
+                            src={url}
+                            alt=""
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                        ) : null}
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent text-white text-[10px] px-2 py-1 truncate">
+                          {bg.label}
+                        </div>
+                        <button
+                          onClick={() => removeUploadedBackground(bg.id)}
+                          className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/70 text-white text-xs grid place-items-center hover:bg-red-600"
+                          aria-label="Remove"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {bgUploadError ? (
+                <div className="mt-3 text-xs text-red-600" role="alert">
+                  {bgUploadError}
+                </div>
+              ) : null}
+            </div>
+
             {cfg.slides.length === 0 ? (
               <div className="text-sm text-[var(--color-muted)]">
                 No pairs yet — add one, or click "Auto-fill 8 pairs".
@@ -590,40 +823,11 @@ export default function Dashboard() {
                       {i + 1}
                     </div>
 
-                    <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-black shrink-0">
-                      <img
-                        src={backgroundUrl(s.backgroundId)}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 grid place-items-center p-3">
-                        {s.logoBackdrop ? (
-                          <div
-                            className="grid place-items-center aspect-square"
-                            style={{
-                              width: "70%",
-                              background: "#FAFAFA",
-                              borderRadius: "22.5%",
-                              padding: "13%",
-                              boxShadow:
-                                "0 4px 10px -3px rgba(0,0,0,0.5), 0 1px 3px -1px rgba(0,0,0,0.3)",
-                            }}
-                          >
-                            <img
-                              src={logoUrl(s.logoId)}
-                              alt=""
-                              className="max-w-full max-h-full object-contain"
-                            />
-                          </div>
-                        ) : (
-                          <img
-                            src={logoUrl(s.logoId)}
-                            alt=""
-                            className="max-w-[80%] max-h-[80%] object-contain"
-                          />
-                        )}
-                      </div>
-                    </div>
+                    <SlideThumb
+                      slide={s}
+                      cfg={cfg}
+                      uploadedBackgroundUrls={uploadedBackgroundUrls}
+                    />
 
                     <div className="flex-1 flex flex-col gap-3">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -635,11 +839,22 @@ export default function Dashboard() {
                             }
                             className="w-full rounded-full border border-[var(--color-line)] bg-white px-3 py-2 text-sm"
                           >
-                            {BACKGROUNDS.map((bg) => (
-                              <option key={bg.id} value={bg.id}>
-                                {bg.label}
-                              </option>
-                            ))}
+                            <optgroup label="Preset">
+                              {BACKGROUNDS.map((bg) => (
+                                <option key={bg.id} value={bg.id}>
+                                  {bg.label}
+                                </option>
+                              ))}
+                            </optgroup>
+                            {cfg.uploadedBackgrounds.length > 0 ? (
+                              <optgroup label="Uploaded">
+                                {cfg.uploadedBackgrounds.map((bg) => (
+                                  <option key={bg.id} value={`upload:${bg.id}`}>
+                                    {bg.label}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ) : null}
                           </select>
                         </Field>
                         <Field label="Logo variant">
@@ -650,11 +865,22 @@ export default function Dashboard() {
                             }
                             className="w-full rounded-full border border-[var(--color-line)] bg-white px-3 py-2 text-sm"
                           >
-                            {LOGOS.map((l) => (
-                              <option key={l.id} value={l.id}>
-                                {l.label}
-                              </option>
-                            ))}
+                            <optgroup label="Preset">
+                              {LOGOS.map((l) => (
+                                <option key={l.id} value={l.id}>
+                                  {l.label}
+                                </option>
+                              ))}
+                            </optgroup>
+                            {cfg.logoCustomVariants.length > 0 ? (
+                              <optgroup label="Custom">
+                                {cfg.logoCustomVariants.map((v) => (
+                                  <option key={v.id} value={`custom:${v.id}`}>
+                                    {v.label}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ) : null}
                           </select>
                         </Field>
                       </div>
@@ -726,9 +952,29 @@ export default function Dashboard() {
                           <span aria-hidden>{s.logoBackdrop ? "◉" : "○"}</span>
                           App-icon backdrop
                         </button>
-                        <span className="text-xs text-[var(--color-muted)] hidden md:inline">
-                          Renders the logo inside a rounded paper square.
-                        </span>
+                        {s.logoBackdrop ? (
+                          <label className="inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] px-2.5 py-1 bg-white text-xs">
+                            <span className="text-[var(--color-muted)]">Colour</span>
+                            <input
+                              type="color"
+                              value={s.logoBackdropColor || "#FAFAFA"}
+                              onChange={(e) =>
+                                patchSlide(s.id, {
+                                  logoBackdropColor: e.target.value,
+                                })
+                              }
+                              className="h-6 w-6 rounded-full border border-[var(--color-line)] bg-transparent cursor-pointer"
+                              aria-label="Backdrop colour"
+                            />
+                            <span className="tabular-nums text-[var(--color-muted)]">
+                              {(s.logoBackdropColor || "#FAFAFA").toUpperCase()}
+                            </span>
+                          </label>
+                        ) : (
+                          <span className="text-xs text-[var(--color-muted)] hidden md:inline">
+                            Renders the logo inside a rounded coloured square.
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -792,6 +1038,108 @@ export default function Dashboard() {
                   className="w-full"
                 />
               </Field>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-[var(--color-line)]">
+              <div className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)] mb-4">
+                Custom logo (SVG upload + colour variants)
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <label className="inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] px-5 py-2.5 text-sm cursor-pointer hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] hover:border-[var(--color-ink)] transition-colors">
+                  {cfg.logoUploadedSvg ? "Replace SVG" : "Upload SVG"}
+                  <input
+                    type="file"
+                    accept="image/svg+xml,.svg"
+                    className="hidden"
+                    onChange={(e) => handleLogoUpload(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {cfg.logoUploadedSvg ? (
+                  <>
+                    <span className="text-sm text-[var(--color-muted)] truncate">
+                      {cfg.logoUploadedLabel ?? "Uploaded logo"}
+                    </span>
+                    <button
+                      onClick={() => handleLogoUpload(null)}
+                      className="text-xs text-[var(--color-muted)] hover:text-red-600"
+                    >
+                      Remove
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-sm text-[var(--color-muted)]">
+                    Upload a single-colour SVG. All fills will be recoloured per variant.
+                  </span>
+                )}
+              </div>
+              {logoUploadError ? (
+                <div className="mt-3 text-sm text-red-600" role="alert">
+                  {logoUploadError}
+                </div>
+              ) : null}
+
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">
+                    Colour variants ({cfg.logoCustomVariants.length})
+                  </div>
+                  <button
+                    onClick={addLogoVariant}
+                    className="text-xs inline-flex items-center gap-1 rounded-full border border-[var(--color-line)] px-3 py-1 hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] hover:border-[var(--color-ink)]"
+                  >
+                    + Add variant
+                  </button>
+                </div>
+                {cfg.logoCustomVariants.length === 0 ? (
+                  <div className="text-sm text-[var(--color-muted)]">
+                    No custom variants yet. Upload an SVG above or click "+ Add variant" to
+                    start recolouring the default GOOD HUMANS mark.
+                  </div>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {cfg.logoCustomVariants.map((v) => (
+                      <li
+                        key={v.id}
+                        className="flex items-center gap-3 rounded-full border border-[var(--color-line)] px-3 py-2 bg-white"
+                      >
+                        <input
+                          type="color"
+                          value={v.color}
+                          onChange={(e) =>
+                            patchLogoVariant(v.id, { color: e.target.value })
+                          }
+                          className="h-8 w-8 rounded-full border border-[var(--color-line)] bg-transparent cursor-pointer"
+                          aria-label="Colour"
+                        />
+                        <input
+                          type="text"
+                          value={v.label}
+                          onChange={(e) =>
+                            patchLogoVariant(v.id, { label: e.target.value })
+                          }
+                          className="flex-1 rounded-full border border-transparent focus:border-[var(--color-line)] px-3 py-1.5 text-sm bg-transparent focus:bg-white outline-none"
+                        />
+                        <span className="text-xs text-[var(--color-muted)] tabular-nums">
+                          {v.color.toUpperCase()}
+                        </span>
+                        <button
+                          onClick={() => removeLogoVariant(v.id)}
+                          className="text-xs text-[var(--color-muted)] hover:text-red-600 px-2"
+                          aria-label="Remove variant"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {cfg.logoCustomVariants.length > 0 && !cfg.logoUploadedSvg ? (
+                  <div className="mt-3 text-xs text-[var(--color-muted)]">
+                    These variants recolour the default preset SVG. Upload your own to
+                    replace the base shape.
+                  </div>
+                ) : null}
+              </div>
             </div>
           </Panel>
 
@@ -1379,6 +1727,91 @@ function Panel({
       {children}
     </section>
   );
+}
+
+function SlideThumb({
+  slide,
+  cfg,
+  uploadedBackgroundUrls,
+}: {
+  slide: VideoConfig["slides"][number];
+  cfg: VideoConfig;
+  uploadedBackgroundUrls: UploadedBackgroundUrls;
+}) {
+  const bgSrc = slide.backgroundId?.startsWith("upload:")
+    ? uploadedBackgroundUrls[slide.backgroundId]
+    : backgroundUrl(slide.backgroundId);
+
+  const isCustom = slide.logoId?.startsWith("custom:");
+  const customVariant = isCustom
+    ? cfg.logoCustomVariants.find(
+        (v) => v.id === slide.logoId.slice("custom:".length),
+      )
+    : null;
+
+  const renderLogo = () => {
+    if (isCustom) {
+      // Show a coloured square swatch — good-enough preview for the thumbnail
+      return (
+        <div
+          className="rounded-lg"
+          style={{
+            width: "70%",
+            height: "70%",
+            background: customVariant?.color ?? "#888",
+          }}
+          aria-label={customVariant?.label ?? "Custom variant"}
+        />
+      );
+    }
+    return (
+      <img
+        src={logoUrl(slide.logoId)}
+        alt=""
+        className="max-w-full max-h-full object-contain"
+      />
+    );
+  };
+
+  return (
+    <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-black shrink-0">
+      {bgSrc ? (
+        <img
+          src={bgSrc}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : null}
+      <div className="absolute inset-0 grid place-items-center p-3">
+        {slide.logoBackdrop ? (
+          <div
+            className="grid place-items-center aspect-square"
+            style={{
+              width: "70%",
+              background: slide.logoBackdropColor || "#FAFAFA",
+              borderRadius: "22.5%",
+              padding: "13%",
+              boxShadow:
+                "0 4px 10px -3px rgba(0,0,0,0.5), 0 1px 3px -1px rgba(0,0,0,0.3)",
+            }}
+          >
+            {renderLogo()}
+          </div>
+        ) : (
+          <div className="grid place-items-center max-w-[80%] max-h-[80%]">
+            {renderLogo()}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function cryptoRandomId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID().slice(0, 8);
+  }
+  return Math.random().toString(36).slice(2, 10);
 }
 
 function formatSec(sec: number): string {

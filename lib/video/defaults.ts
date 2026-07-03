@@ -18,6 +18,8 @@ const DEFAULT_BG_STACK = BACKGROUNDS.map((b) => b.id);
 // Cycle through 4 high-contrast variants against the default backgrounds
 const DEFAULT_LOGO_CYCLE = ["variant4", "default", "variant12", "variant8"];
 
+export const DEFAULT_BACKDROP_COLOR = "#FAFAFA";
+
 export function makeSlide(backgroundId: string, logoId: string): Slide {
   return {
     id: nextSlideId(),
@@ -27,6 +29,7 @@ export function makeSlide(backgroundId: string, logoId: string): Slide {
     transition: "cut",
     transitionMs: DEFAULT_TRANSITION_MS,
     logoBackdrop: false,
+    logoBackdropColor: DEFAULT_BACKDROP_COLOR,
   };
 }
 
@@ -42,6 +45,10 @@ export const DEFAULT_CONFIG: VideoConfig = {
 
   logoAnimation: "none",
   logoSizePct: 28,
+  logoUploadedSvg: null,
+  logoUploadedLabel: null,
+  logoCustomVariants: [],
+  uploadedBackgrounds: [],
 
   slides: makeDefaultSlides(),
 

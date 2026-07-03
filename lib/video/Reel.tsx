@@ -10,6 +10,7 @@ import {
 } from "remotion";
 import { Audio } from "@remotion/media";
 import { backgroundUrl, logoUrl, clickUrl, musicPresetUrl, LOGOS } from "./presets";
+import { recolorSvg } from "./logoSvg";
 import { DESIGN_WIDTH, DESIGN_HEIGHT, RATIO_DIMENSIONS } from "./types";
 import type { RenderConfig, LogoEntryAnimation } from "./types";
 import { computeSlideTimings, computeClickCues, type SlideTiming } from "./timing";
@@ -73,7 +74,12 @@ function SlideVisual({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const url = slide.backgroundId ? backgroundUrl(slide.backgroundId) : null;
+  const bgId = slide.backgroundId ?? "";
+  const url = bgId.startsWith("upload:")
+    ? cfg.uploadedBackgroundUrls?.[bgId] ?? null
+    : bgId
+    ? backgroundUrl(bgId)
+    : null;
   const tFrames = Math.round((timing.transitionMs / 1000) * fps);
 
   const opacity = (() => {
@@ -139,29 +145,40 @@ function LogoOverlay({
 }) {
   const frame = useCurrentFrame();
   const slide = cfg.slides[slideIndex];
-  const logoId = slide.logoId || LOGOS[0].id;
-  const src = logoUrl(logoId);
 
   const tFrames = Math.round((timing.transitionMs / 1000) * 30);
   const anim = animateLogoEntry(frame, cfg.logoAnimation, { delay: tFrames });
-  const sizePct = Math.max(20, Math.min(90, cfg.logoSizePct ?? 55));
+  const sizePct = Math.max(20, Math.min(90, cfg.logoSizePct ?? 28));
 
   const backdrop = slide.logoBackdrop === true;
+  const backdropColor = slide.logoBackdropColor || "#FAFAFA";
 
-  // Keep the visible logo mark at exactly `sizePct%` of the canvas whether or
-  // not the backdrop is enabled. CSS padding percentages are of the *parent*
-  // width, so if the outer div is width X% and padding is P% (both parent-
-  // relative), the inner content area is (X − 2P)% of the parent. To make
-  // that equal sizePct while keeping a proportional inset:
-  //
-  //   inset ratio r  → padding P = r × sizePct
-  //   container width X = sizePct + 2P = sizePct × (1 + 2r)
-  //
-  // For an iOS-style icon safe zone, r ≈ 0.18 (a bit over 15% of the icon
-  // edge on each side).
+  // See the previous commit's comment: keep the visible logo mark at exactly
+  // sizePct% of the canvas whether or not backdrop is enabled.
   const INSET_RATIO = 0.18;
   const paddingPct = backdrop ? sizePct * INSET_RATIO : 0;
   const containerSizePct = sizePct + 2 * paddingPct;
+
+  // Resolve the logo source. Two paths:
+  //   * `custom:<variantId>` → look up the variant, recolour the base SVG,
+  //     inline the result so Remotion can rasterise it in the composition.
+  //   * preset id (default / variant2 / ...) → use the preset image URL.
+  const isCustom = slide.logoId?.startsWith("custom:");
+  let inlineSvgMarkup: string | null = null;
+  let presetSrc: string | null = null;
+
+  if (isCustom && cfg.logoUploadedSvg) {
+    const variantId = slide.logoId.slice("custom:".length);
+    const variant = cfg.logoCustomVariants?.find((v) => v.id === variantId);
+    const color = variant?.color ?? "#000000";
+    inlineSvgMarkup = recolorSvg(cfg.logoUploadedSvg, color);
+  } else if (isCustom) {
+    // Custom variant selected but no uploaded SVG — fall back to the first
+    // preset so the composition doesn't render an empty square.
+    presetSrc = logoUrl(LOGOS[0].id);
+  } else {
+    presetSrc = logoUrl(slide.logoId || LOGOS[0].id);
+  }
 
   return (
     <div
@@ -183,28 +200,32 @@ function LogoOverlay({
           display: "grid",
           placeItems: "center",
           padding: `${paddingPct}%`,
-          background: backdrop ? "#FAFAFA" : "transparent",
-          // iOS app-icon corner radius ≈ 22.5% of the icon's edge
+          background: backdrop ? backdropColor : "transparent",
           borderRadius: backdrop ? "22.5%" : 0,
-          // Layered shadow so the icon lifts off the background image without
-          // looking like a dark drop shadow blob.
           boxShadow: backdrop
             ? "0 30px 60px -20px rgba(0,0,0,0.55), 0 8px 20px -12px rgba(0,0,0,0.35)"
             : "none",
         }}
       >
-        <img
-          src={src}
-          alt=""
-          style={{
-            maxWidth: "100%",
-            maxHeight: "100%",
-            width: "auto",
-            height: "auto",
-            objectFit: "contain",
-            display: "block",
-          }}
-        />
+        {inlineSvgMarkup ? (
+          <div
+            style={{ width: "100%", height: "100%", display: "grid", placeItems: "center" }}
+            dangerouslySetInnerHTML={{ __html: inlineSvgMarkup }}
+          />
+        ) : presetSrc ? (
+          <img
+            src={presetSrc}
+            alt=""
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              width: "auto",
+              height: "auto",
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );
