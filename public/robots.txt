@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Disallow: /video-generation
+Disallow: /video-generation/
