@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { services } from "@/lib/services";
 
@@ -9,15 +8,16 @@ export default function Footer() {
       <div className="container-x py-16 md:py-20">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 items-start">
           <div className="md:col-span-5">
-            <Link href="/" className="flex items-center gap-3">
-              <Image src="/logo.png" alt="GOOD HUMANS" width={48} height={48} className="rounded-md" />
-              <div>
-                <div className="display-text text-2xl">GOOD HUMANS</div>
-                <div className="text-xs uppercase tracking-[0.22em] text-white/45 mt-1">
-                  Human-first digital consulting
-                </div>
-              </div>
+            <Link href="/" className="inline-block" aria-label="GOOD HUMANS — home">
+              <img
+                src="/logo-wordmark-paper.svg"
+                alt="GOOD HUMANS"
+                className="block h-12 md:h-16 w-auto"
+              />
             </Link>
+            <div className="mt-5 text-xs uppercase tracking-[0.22em] text-white/45">
+              Human-first digital consulting
+            </div>
             <p className="mt-8 text-white/65 max-w-[40ch] leading-snug">
               Helping startups and modern businesses grow through web, app,
               brand, design and growth — with trusted delivery partners around

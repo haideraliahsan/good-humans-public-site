@@ -44,10 +44,12 @@ export default function Nav() {
         className="absolute inset-0 bg-[var(--color-paper)]/85 backdrop-blur-md border-b border-[var(--color-line)]"
       />
       <div className="relative container-x flex items-center justify-between h-20">
-        <Link href="/" className="group">
-          <span className="display-text text-2xl md:text-3xl tracking-tight">
-            GOOD HUMANS
-          </span>
+        <Link href="/" className="group inline-flex items-center" aria-label="GOOD HUMANS — home">
+          <img
+            src="/logo-wordmark-ink.svg"
+            alt="GOOD HUMANS"
+            className="h-9 md:h-11 w-auto"
+          />
         </Link>
 
         <nav className="hidden md:flex items-center gap-10 text-sm">

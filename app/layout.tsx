@@ -33,7 +33,16 @@ export const metadata: Metadata = {
     type: "website",
   },
   icons: {
-    icon: "/logo.png",
+    icon: [
+      // Ink logo mark for light-theme browser chrome
+      { url: "/logo-mark-ink.svg", type: "image/svg+xml", media: "(prefers-color-scheme: light)" },
+      // Paper logo mark for dark-theme browser chrome
+      { url: "/logo-mark-paper.svg", type: "image/svg+xml", media: "(prefers-color-scheme: dark)" },
+      // Fallback for browsers that don't honour media queries on icons — the
+      // existing white-on-black wordmark reads on any tab background.
+      { url: "/logo.png", type: "image/png", sizes: "any" },
+    ],
+    apple: "/logo.png",
   },
 };
 
