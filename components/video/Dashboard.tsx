@@ -15,9 +15,11 @@ import {
   BACKGROUNDS,
   LOGOS,
   CLICKS,
+  MUSIC_PRESETS,
   backgroundUrl,
   logoUrl,
   clickUrl,
+  musicPresetUrl,
 } from "@/lib/video/presets";
 import {
   computeSlideTimings,
@@ -44,6 +46,7 @@ import {
 import {
   measureLeadingSilenceSec,
   measureLeadingSilenceOfUrl,
+  measureAudioBlobSeconds,
 } from "@/lib/video/audio";
 
 const CONFIG_KEY = "gh_video_config";
@@ -81,6 +84,10 @@ export default function Dashboard() {
   const [clickAutoTrimSec, setClickAutoTrimSec] = useState(0);
   const [musicAutoTrimSec, setMusicAutoTrimSec] = useState(0);
   const [autoTrimBusy, setAutoTrimBusy] = useState<"click" | "music" | null>(null);
+
+  // Duration of the currently-loaded music source (seconds). Drives the
+  // "Start from" slider range so the operator can scrub through the whole track.
+  const [musicDurationSec, setMusicDurationSec] = useState<number>(0);
 
   // Music AI generation state
   const [musicProxyUrl, setMusicProxyUrl] = useState("");
@@ -127,6 +134,38 @@ export default function Dashboard() {
     if (!mounted) return;
     writeProxyConfig({ url: musicProxyUrl, secret: musicProxySecret });
   }, [musicProxyUrl, musicProxySecret, mounted]);
+
+  // When the music source becomes a preset — or the user picks a different
+  // preset — measure its duration + leading silence so the "Start from"
+  // slider gets a proper range.
+  useEffect(() => {
+    if (!mounted) return;
+    if (cfg.musicSource !== "preset" || !cfg.musicPresetId) return;
+    let cancelled = false;
+
+    const url = musicPresetUrl(cfg.musicPresetId);
+    setAutoTrimBusy("music");
+    (async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const [trim, dur] = await Promise.all([
+          measureLeadingSilenceSec(blob).catch(() => 0),
+          measureAudioBlobSeconds(blob).catch(() => 0),
+        ]);
+        if (cancelled) return;
+        setMusicAutoTrimSec(trim);
+        setMusicDurationSec(dur);
+      } finally {
+        if (!cancelled) setAutoTrimBusy((b) => (b === "music" ? null : b));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mounted, cfg.musicSource, cfg.musicPresetId]);
 
   // Auto-detect leading silence for the ACTIVE click source. Runs whenever
   // the user switches source or picks a different preset.
@@ -177,16 +216,22 @@ export default function Dashboard() {
       setMusicUrl(null);
       setMusicName(null);
       setMusicAutoTrimSec(0);
+      setMusicDurationSec(0);
       return;
     }
     setMusicUrl(URL.createObjectURL(blob));
     setMusicName(name);
     setAutoTrimBusy("music");
     try {
-      const trim = await measureLeadingSilenceSec(blob);
+      const [trim, dur] = await Promise.all([
+        measureLeadingSilenceSec(blob).catch(() => 0),
+        measureAudioBlobSeconds(blob).catch(() => 0),
+      ]);
       setMusicAutoTrimSec(trim);
-    } catch {
-      setMusicAutoTrimSec(0);
+      setMusicDurationSec(dur);
+      // Reset the manual "start from" trim so the operator starts fresh with
+      // the new file — the previous value from a different track is nonsense.
+      setCfg((prev) => ({ ...prev, musicStartFromSec: 0 }));
     } finally {
       setAutoTrimBusy((b) => (b === "music" ? null : b));
     }
@@ -552,12 +597,31 @@ export default function Dashboard() {
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 grid place-items-center p-3">
-                        <img
-                          src={logoUrl(s.logoId)}
-                          alt=""
-                          className="max-w-[80%] max-h-[80%] object-contain"
-                          style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))" }}
-                        />
+                        {s.logoBackdrop ? (
+                          <div
+                            className="grid place-items-center aspect-square"
+                            style={{
+                              width: "70%",
+                              background: "#FAFAFA",
+                              borderRadius: "22.5%",
+                              padding: "13%",
+                              boxShadow:
+                                "0 4px 10px -3px rgba(0,0,0,0.5), 0 1px 3px -1px rgba(0,0,0,0.3)",
+                            }}
+                          >
+                            <img
+                              src={logoUrl(s.logoId)}
+                              alt=""
+                              className="max-w-full max-h-full object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <img
+                            src={logoUrl(s.logoId)}
+                            alt=""
+                            className="max-w-[80%] max-h-[80%] object-contain"
+                          />
+                        )}
                       </div>
                     </div>
 
@@ -646,6 +710,26 @@ export default function Dashboard() {
                           </div>
                         </Field>
                       </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            patchSlide(s.id, { logoBackdrop: !s.logoBackdrop })
+                          }
+                          className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs transition-colors ${
+                            s.logoBackdrop
+                              ? "bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]"
+                              : "border-[var(--color-line)] hover:border-[var(--color-ink)]"
+                          }`}
+                          aria-pressed={s.logoBackdrop}
+                        >
+                          <span aria-hidden>{s.logoBackdrop ? "◉" : "○"}</span>
+                          App-icon backdrop
+                        </button>
+                        <span className="text-xs text-[var(--color-muted)] hidden md:inline">
+                          Renders the logo inside a rounded paper square.
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex md:flex-col items-center gap-1">
@@ -716,11 +800,49 @@ export default function Dashboard() {
               value={cfg.musicSource}
               onChange={(v) => setCfg({ ...cfg, musicSource: v })}
               options={[
+                { value: "preset", label: "Preset" },
                 { value: "uploaded", label: "Upload file" },
                 { value: "generated", label: "Generate with AI" },
                 { value: "none", label: "No music" },
               ]}
             />
+
+            {cfg.musicSource === "preset" ? (
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+                {MUSIC_PRESETS.map((m) => {
+                  const on = cfg.musicPresetId === m.id;
+                  return (
+                    <div
+                      key={m.id}
+                      className={`rounded-xl border p-4 flex flex-col gap-2 transition-colors ${
+                        on
+                          ? "border-[var(--color-ink)] bg-white"
+                          : "border-[var(--color-line)]"
+                      }`}
+                    >
+                      <button
+                        onClick={() => setCfg({ ...cfg, musicPresetId: m.id })}
+                        className="text-left flex-1"
+                      >
+                        <div className="text-sm font-medium">{m.label}</div>
+                        <div className="text-xs text-[var(--color-muted)] mt-0.5">
+                          {m.artist}
+                        </div>
+                        <div className="text-xs text-[var(--color-muted)] leading-snug mt-1">
+                          {m.description}
+                        </div>
+                      </button>
+                      <audio
+                        src={musicPresetUrl(m.id)}
+                        controls
+                        preload="metadata"
+                        className="w-full"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
 
             {cfg.musicSource === "uploaded" ? (
               <div className="mt-6 flex flex-col gap-4">
@@ -875,7 +997,58 @@ export default function Dashboard() {
                 />
               </Field>
             </div>
-            {cfg.musicSource !== "none" && musicUrl ? (
+
+            {cfg.musicSource !== "none" ? (
+              <div className="mt-6">
+                <Field
+                  label={
+                    <>
+                      Start from — <span className="tabular-nums text-[var(--color-ink)]">{formatSec(cfg.musicStartFromSec)}</span>
+                      {musicDurationSec > 0 ? (
+                        <>
+                          {" "}of <span className="tabular-nums">{formatSec(musicDurationSec)}</span>
+                        </>
+                      ) : null}
+                    </>
+                  }
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min={0}
+                      max={Math.max(0, musicDurationSec - 1)}
+                      step={0.1}
+                      value={Math.min(cfg.musicStartFromSec, Math.max(0, musicDurationSec - 1))}
+                      onChange={(e) =>
+                        setCfg({ ...cfg, musicStartFromSec: Number(e.target.value) })
+                      }
+                      disabled={musicDurationSec <= 0}
+                      className="w-full"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      max={Math.max(0, musicDurationSec - 0.1)}
+                      step={0.1}
+                      value={cfg.musicStartFromSec.toFixed(1)}
+                      onChange={(e) =>
+                        setCfg({ ...cfg, musicStartFromSec: Number(e.target.value) })
+                      }
+                      disabled={musicDurationSec <= 0}
+                      className="w-24 rounded-full border border-[var(--color-line)] bg-white px-3 py-1.5 text-xs tabular-nums text-right"
+                    />
+                    <span className="text-xs text-[var(--color-muted)]">s</span>
+                  </div>
+                  <div className="mt-1 text-xs text-[var(--color-muted)]">
+                    {musicDurationSec <= 0
+                      ? "Pick or upload a track to enable scrubbing."
+                      : `Skip the first ${formatSec(cfg.musicStartFromSec)} of the track so the reel opens on the phrase you want.`}
+                  </div>
+                </Field>
+              </div>
+            ) : null}
+
+            {cfg.musicSource !== "none" && (musicUrl || cfg.musicPresetId) ? (
               <div className="mt-4 rounded-xl bg-[var(--color-paper)] border border-[var(--color-line)] px-4 py-3 text-xs text-[var(--color-muted)] flex items-center gap-3">
                 <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                 {autoTrimBusy === "music" ? (
@@ -1208,7 +1381,14 @@ function Panel({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function formatSec(sec: number): string {
+  const s = Math.max(0, sec);
+  const m = Math.floor(s / 60);
+  const rest = s - m * 60;
+  return `${m}:${rest.toFixed(1).padStart(4, "0")}`;
+}
+
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-2">
       <span className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">

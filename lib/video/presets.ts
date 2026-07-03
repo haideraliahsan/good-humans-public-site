@@ -20,6 +20,14 @@ export type ClickPreset = {
   description: string;
 };
 
+export type MusicPreset = {
+  id: string;
+  label: string;
+  artist: string;
+  file: string;
+  description: string;
+};
+
 export const BACKGROUNDS: BackgroundPreset[] = [
   // Kept from earlier sets
   { id: "debit-card",         label: "Black debit card",         file: "debit-card.jpg",         tone: "dark"  },
@@ -65,6 +73,30 @@ export const CLICKS: ClickPreset[] = [
   { id: "chamber-click",  label: "Chamber click",    file: "chamber-click.mp3",  description: "Deep, low — subtle" },
 ];
 
+export const MUSIC_PRESETS: MusicPreset[] = [
+  {
+    id: "frank-bentley-too-ez",
+    label: "TOO EZ",
+    artist: "Frank Bentley",
+    file: "frank-bentley-too-ez.mp3",
+    description: "Laid-back groove, easy vibe",
+  },
+  {
+    id: "katrina-stone-keep-in-touch",
+    label: "Keep in Touch (instrumental)",
+    artist: "Katrina Stone",
+    file: "katrina-stone-keep-in-touch.mp3",
+    description: "Warm cinematic instrumental",
+  },
+  {
+    id: "zooki-make-me-sick",
+    label: "Make Me Sick",
+    artist: "Zooki",
+    file: "zooki-make-me-sick.mp3",
+    description: "Energetic, driving — bigger statement",
+  },
+];
+
 export const backgroundUrl = (id: string): string =>
   `/video-assets/backgrounds/${BACKGROUNDS.find((b) => b.id === id)?.file ?? ""}`;
 
@@ -74,6 +106,10 @@ export const logoUrl = (id: string): string =>
 export const clickUrl = (id: string): string =>
   `/video-assets/clicks/${CLICKS.find((c) => c.id === id)?.file ?? ""}`;
 
-export const findBackground = (id: string) => BACKGROUNDS.find((b) => b.id === id);
-export const findLogo       = (id: string) => LOGOS.find((l) => l.id === id);
-export const findClick      = (id: string) => CLICKS.find((c) => c.id === id);
+export const musicPresetUrl = (id: string): string =>
+  `/video-assets/music/${MUSIC_PRESETS.find((m) => m.id === id)?.file ?? ""}`;
+
+export const findBackground  = (id: string) => BACKGROUNDS.find((b) => b.id === id);
+export const findLogo        = (id: string) => LOGOS.find((l) => l.id === id);
+export const findClick       = (id: string) => CLICKS.find((c) => c.id === id);
+export const findMusicPreset = (id: string) => MUSIC_PRESETS.find((m) => m.id === id);

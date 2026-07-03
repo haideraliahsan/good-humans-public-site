@@ -1,11 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import emailjs from "@emailjs/browser";
 import { services } from "@/lib/services";
+
+// EmailJS keys are exposed to the client — that's the intended threat model
+// (domain whitelisting on emailjs.com controls who can hit your account).
+const SERVICE_ID  = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID  || "";
+const TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || "";
+const PUBLIC_KEY  = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY  || "";
+
+type Status =
+  | { kind: "idle" }
+  | { kind: "sending" }
+  | { kind: "success" }
+  | { kind: "error"; message: string };
 
 export default function ContactForm() {
   const [selected, setSelected] = useState<string[]>([]);
-  const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const formRef = useRef<HTMLFormElement>(null);
 
   const toggle = (slug: string) => {
     setSelected((prev) =>
@@ -13,30 +27,59 @@ export default function ContactForm() {
     );
   };
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (!SERVICE_ID || !TEMPLATE_ID || !PUBLIC_KEY) {
+      setStatus({
+        kind: "error",
+        message:
+          "Email service isn't configured yet. Set NEXT_PUBLIC_EMAILJS_* in .env.local.",
+      });
+      return;
+    }
+
     const data = new FormData(e.currentTarget);
-    const name = data.get("name");
-    const email = data.get("email");
-    const company = data.get("company");
-    const message = data.get("message");
-    const subject = encodeURIComponent(`New enquiry from ${name ?? "the website"}`);
-    const body = encodeURIComponent(
-      [
-        `Name: ${name ?? ""}`,
-        `Email: ${email ?? ""}`,
-        `Company: ${company ?? ""}`,
-        `Interested in: ${selected.join(", ") || "—"}`,
+    const interestedIn = selected
+      .map((slug) => services.find((s) => s.slug === slug)?.title ?? slug)
+      .join(", ");
+
+    // Values here match `{{name}}`, `{{email}}` etc. tokens in your EmailJS template.
+    const params: Record<string, string> = {
+      name: String(data.get("name") ?? ""),
+      email: String(data.get("email") ?? ""),
+      company: String(data.get("company") ?? ""),
+      interested_in: interestedIn || "—",
+      message: String(data.get("message") ?? ""),
+      // Convenience combined field for a simple one-slot template
+      full_message: [
+        `Name: ${data.get("name") ?? ""}`,
+        `Email: ${data.get("email") ?? ""}`,
+        `Company: ${data.get("company") ?? ""}`,
+        `Interested in: ${interestedIn || "—"}`,
         ``,
-        `${message ?? ""}`,
-      ].join("\n")
-    );
-    window.location.href = `mailto:hello@goodhumans.co?subject=${subject}&body=${body}`;
-    setSubmitted(true);
+        String(data.get("message") ?? ""),
+      ].join("\n"),
+    };
+
+    setStatus({ kind: "sending" });
+    try {
+      await emailjs.send(SERVICE_ID, TEMPLATE_ID, params, { publicKey: PUBLIC_KEY });
+      setStatus({ kind: "success" });
+      formRef.current?.reset();
+      setSelected([]);
+    } catch (err: unknown) {
+      const message =
+        (err as { text?: string })?.text ??
+        (err instanceof Error ? err.message : "Something went wrong.");
+      setStatus({ kind: "error", message });
+    }
   }
 
+  const sending = status.kind === "sending";
+
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} onSubmit={handleSubmit} className="grid grid-cols-1 gap-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Field label="Your name" name="name" required />
         <Field label="Email" name="email" type="email" required />
@@ -90,25 +133,50 @@ export default function ContactForm() {
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pt-2">
         <p className="text-sm text-[var(--color-muted)] max-w-[42ch]">
-          We'll reply within 48 hours. By submitting you'll be opening your
-          email client to send the message.
+          We'll reply within 48 hours. Your details are sent securely via EmailJS —
+          nothing is stored on this site.
         </p>
         <button
           type="submit"
-          className="group inline-flex items-center justify-center gap-2 rounded-full bg-[var(--color-ink)] text-[var(--color-paper)] px-7 py-4 text-base font-medium hover:gap-3 transition-all"
+          disabled={sending}
+          className="group inline-flex items-center justify-center gap-2 rounded-full bg-[var(--color-ink)] text-[var(--color-paper)] px-7 py-4 text-base font-medium hover:gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {submitted ? "Opening email…" : "Send enquiry"}
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-            <path
-              d="M3 8h10m0 0L9 4m4 4l-4 4"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          {sending ? "Sending…" : "Send enquiry"}
+          {sending ? null : (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path
+                d="M3 8h10m0 0L9 4m4 4l-4 4"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
         </button>
       </div>
+
+      {status.kind === "success" ? (
+        <div
+          role="status"
+          className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800"
+        >
+          ✓ Thanks — your message is on its way. We&rsquo;ll reply within 48 hours.
+        </div>
+      ) : null}
+
+      {status.kind === "error" ? (
+        <div
+          role="alert"
+          className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800"
+        >
+          ✕ {status.message} Please try again, or email us directly at{" "}
+          <a href="mailto:hello@goodhumans.co" className="underline">
+            hello@goodhumans.co
+          </a>
+          .
+        </div>
+      ) : null}
     </form>
   );
 }

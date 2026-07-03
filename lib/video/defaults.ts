@@ -1,4 +1,4 @@
-import { BACKGROUNDS, LOGOS, CLICKS } from "./presets";
+import { BACKGROUNDS, LOGOS, CLICKS, MUSIC_PRESETS } from "./presets";
 import type { VideoConfig, Slide } from "./types";
 import { CONFIG_VERSION } from "./types";
 
@@ -26,6 +26,7 @@ export function makeSlide(backgroundId: string, logoId: string): Slide {
     durationSec: DEFAULT_SLIDE_DURATION_SEC,
     transition: "cut",
     transitionMs: DEFAULT_TRANSITION_MS,
+    logoBackdrop: false,
   };
 }
 
@@ -40,7 +41,7 @@ export const DEFAULT_CONFIG: VideoConfig = {
   ratio: "9:16",
 
   logoAnimation: "none",
-  logoSizePct: 55,
+  logoSizePct: 28,
 
   slides: makeDefaultSlides(),
 
@@ -51,11 +52,14 @@ export const DEFAULT_CONFIG: VideoConfig = {
   clickOffsetFrames: 0,
   clickOnFirstSlide: true,
 
-  musicSource: "none",
+  musicSource: "preset",
+  musicPresetId: MUSIC_PRESETS[0]?.id ?? null,
   musicVolume: 0.6,
   musicFadeInFrames: 14,
   musicFadeOutFrames: 22,
   musicStartFromSec: 0,
 };
+
+export { MUSIC_PRESETS };
 
 export { BACKGROUNDS, LOGOS, CLICKS };

@@ -10,13 +10,16 @@ export type Slide = {
   durationSec: number;
   transition: Transition;
   transitionMs: number;
+  // When true, render the logo inside a paper (light) rounded-square backdrop
+  // so it reads as an app icon on top of the background image.
+  logoBackdrop: boolean;
 };
 
-export type MusicSource = "uploaded" | "generated" | "none";
+export type MusicSource = "preset" | "uploaded" | "generated" | "none";
 export type ClickSource = "preset" | "uploaded" | "generated" | "none";
 
 export type VideoConfig = {
-  configVersion: 11;
+  configVersion: 14;
   ratio: Ratio;
 
   logoAnimation: LogoEntryAnimation;
@@ -34,6 +37,7 @@ export type VideoConfig = {
 
   // Music
   musicSource: MusicSource;
+  musicPresetId: string | null;
   musicVolume: number;
   musicFadeInFrames: number;
   musicFadeOutFrames: number;
@@ -56,7 +60,7 @@ export type RuntimeAudio = {
 
 export type RenderConfig = VideoConfig & RuntimeAudio;
 
-export const CONFIG_VERSION = 11 as const;
+export const CONFIG_VERSION = 14 as const;
 export const FPS = 30 as const;
 export const DESIGN_WIDTH = 1080 as const;
 export const DESIGN_HEIGHT = 1920 as const;

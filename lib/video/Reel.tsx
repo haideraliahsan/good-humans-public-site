@@ -9,7 +9,7 @@ import {
   interpolate,
 } from "remotion";
 import { Audio } from "@remotion/media";
-import { backgroundUrl, logoUrl, clickUrl, LOGOS } from "./presets";
+import { backgroundUrl, logoUrl, clickUrl, musicPresetUrl, LOGOS } from "./presets";
 import { DESIGN_WIDTH, DESIGN_HEIGHT, RATIO_DIMENSIONS } from "./types";
 import type { RenderConfig, LogoEntryAnimation } from "./types";
 import { computeSlideTimings, computeClickCues, type SlideTiming } from "./timing";
@@ -146,6 +146,23 @@ function LogoOverlay({
   const anim = animateLogoEntry(frame, cfg.logoAnimation, { delay: tFrames });
   const sizePct = Math.max(20, Math.min(90, cfg.logoSizePct ?? 55));
 
+  const backdrop = slide.logoBackdrop === true;
+
+  // Keep the visible logo mark at exactly `sizePct%` of the canvas whether or
+  // not the backdrop is enabled. CSS padding percentages are of the *parent*
+  // width, so if the outer div is width X% and padding is P% (both parent-
+  // relative), the inner content area is (X − 2P)% of the parent. To make
+  // that equal sizePct while keeping a proportional inset:
+  //
+  //   inset ratio r  → padding P = r × sizePct
+  //   container width X = sizePct + 2P = sizePct × (1 + 2r)
+  //
+  // For an iOS-style icon safe zone, r ≈ 0.18 (a bit over 15% of the icon
+  // edge on each side).
+  const INSET_RATIO = 0.18;
+  const paddingPct = backdrop ? sizePct * INSET_RATIO : 0;
+  const containerSizePct = sizePct + 2 * paddingPct;
+
   return (
     <div
       style={{
@@ -160,11 +177,20 @@ function LogoOverlay({
     >
       <div
         style={{
-          width: `${sizePct}%`,
-          height: `${sizePct}%`,
+          width: `${containerSizePct}%`,
+          aspectRatio: "1 / 1",
+          boxSizing: "border-box",
           display: "grid",
           placeItems: "center",
-          filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.35))",
+          padding: `${paddingPct}%`,
+          background: backdrop ? "#FAFAFA" : "transparent",
+          // iOS app-icon corner radius ≈ 22.5% of the icon's edge
+          borderRadius: backdrop ? "22.5%" : 0,
+          // Layered shadow so the icon lifts off the background image without
+          // looking like a dark drop shadow blob.
+          boxShadow: backdrop
+            ? "0 30px 60px -20px rgba(0,0,0,0.55), 0 8px 20px -12px rgba(0,0,0,0.35)"
+            : "none",
         }}
       >
         <img
@@ -219,7 +245,14 @@ function animateLogoEntry(
 function MusicTrack({ cfg }: { cfg: RenderConfig }) {
   const { fps, durationInFrames } = useVideoConfig();
   if (cfg.musicSource === "none") return null;
-  if (!cfg.musicUrl) return null;
+
+  // Resolve the source URL: presets have a resolvable id, uploaded/generated
+  // both come through as cfg.musicUrl (runtime blob URL from the dashboard).
+  const src =
+    cfg.musicSource === "preset" && cfg.musicPresetId
+      ? musicPresetUrl(cfg.musicPresetId)
+      : cfg.musicUrl;
+  if (!src) return null;
 
   const vol = cfg.musicVolume ?? 0.6;
   const fadeIn = Math.max(0, cfg.musicFadeInFrames ?? 14);
@@ -242,7 +275,7 @@ function MusicTrack({ cfg }: { cfg: RenderConfig }) {
 
   return (
     <Sequence from={0} durationInFrames={durationInFrames}>
-      <Audio src={cfg.musicUrl} volume={volume} trimBefore={trimBefore} loop />
+      <Audio src={src} volume={volume} trimBefore={trimBefore} loop />
     </Sequence>
   );
 }

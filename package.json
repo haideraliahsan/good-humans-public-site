@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@remotion/media": "^4.0.484",
     "@remotion/player": "^4.0.484",
     "@remotion/web-renderer": "^4.0.484",
