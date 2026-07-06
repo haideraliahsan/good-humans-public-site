@@ -553,24 +553,52 @@ export default function Dashboard() {
   };
 
   // ── Slide mutations ────────────────────────────────────────────────
+  // Rotate through both preset AND uploaded backgrounds when picking the
+  // "next" background for a fresh pair.
+  const allBackgroundIds = useMemo(
+    () => [
+      ...BACKGROUNDS.map((b) => b.id),
+      ...cfg.uploadedBackgrounds.map((b) => `upload:${b.id}`),
+    ],
+    [cfg.uploadedBackgrounds],
+  );
+
   const addSlide = () => {
     const lastLogo = cfg.slides.length
       ? cfg.slides[cfg.slides.length - 1].logoId
       : LOGOS[0].id;
     const lastBg = cfg.slides.length
       ? cfg.slides[cfg.slides.length - 1].backgroundId
-      : BACKGROUNDS[0].id;
+      : allBackgroundIds[0];
 
     // Pick a different logo variant than the previous one
     const logoIdx = LOGOS.findIndex((l) => l.id === lastLogo);
     const nextLogo = LOGOS[(logoIdx + 1) % LOGOS.length].id;
-    // Pick a different bg than the last used
-    const bgIdx = BACKGROUNDS.findIndex((b) => b.id === lastBg);
-    const nextBg = BACKGROUNDS[(bgIdx + 1) % BACKGROUNDS.length].id;
+    // Pick a different bg than the last used — includes uploaded ones
+    const bgIdx = allBackgroundIds.findIndex((b) => b === lastBg);
+    const nextBg =
+      allBackgroundIds[
+        ((bgIdx < 0 ? -1 : bgIdx) + 1 + allBackgroundIds.length) %
+          allBackgroundIds.length
+      ];
 
     setCfg((prev) => ({
       ...prev,
       slides: [...prev.slides, makeSlide(nextBg, nextLogo)],
+    }));
+  };
+
+  // Add a new pair whose background is a specific uploaded (or preset) id.
+  // Rotates the logo variant so the pair doesn't reuse the last-used logo.
+  const addSlideWithBackground = (backgroundId: string) => {
+    const lastLogo = cfg.slides.length
+      ? cfg.slides[cfg.slides.length - 1].logoId
+      : LOGOS[0].id;
+    const logoIdx = LOGOS.findIndex((l) => l.id === lastLogo);
+    const nextLogo = LOGOS[(logoIdx + 1) % LOGOS.length].id;
+    setCfg((prev) => ({
+      ...prev,
+      slides: [...prev.slides, makeSlide(backgroundId, nextLogo)],
     }));
   };
 
@@ -812,32 +840,85 @@ export default function Dashboard() {
                   Drop in your own images to use alongside the presets. Kept in your browser only.
                 </div>
               ) : (
-                <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                  {cfg.uploadedBackgrounds.map((bg) => {
-                    const url = uploadedBackgroundUrls[`upload:${bg.id}`];
-                    return (
-                      <li key={bg.id} className="relative aspect-square rounded-xl overflow-hidden border border-[var(--color-line)] bg-black">
-                        {url ? (
-                          <img
-                            src={url}
-                            alt=""
-                            className="absolute inset-0 w-full h-full object-cover"
-                          />
-                        ) : null}
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent text-white text-[10px] px-2 py-1 truncate">
-                          {bg.label}
-                        </div>
-                        <button
-                          onClick={() => removeUploadedBackground(bg.id)}
-                          className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/70 text-white text-xs grid place-items-center hover:bg-red-600"
-                          aria-label="Remove"
+                <>
+                  <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    {cfg.uploadedBackgrounds.map((bg) => {
+                      const url = uploadedBackgroundUrls[`upload:${bg.id}`];
+                      const usedIn = cfg.slides.filter(
+                        (s) => s.backgroundId === `upload:${bg.id}`,
+                      ).length;
+                      return (
+                        <li
+                          key={bg.id}
+                          className="group relative aspect-square rounded-xl overflow-hidden border border-[var(--color-line)] bg-black"
                         >
-                          ✕
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+                          {url ? (
+                            <img
+                              src={url}
+                              alt=""
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                          ) : null}
+                          {/* Whole-tile click adds a new pair with this background */}
+                          <button
+                            type="button"
+                            onClick={() => addSlideWithBackground(`upload:${bg.id}`)}
+                            className="absolute inset-0 grid place-items-center bg-black/0 hover:bg-black/40 transition-colors text-white text-xs opacity-0 group-hover:opacity-100"
+                            aria-label={`Add pair using ${bg.label}`}
+                          >
+                            <span className="inline-flex items-center gap-1 rounded-full bg-white text-[var(--color-ink)] px-3 py-1.5 font-medium">
+                              + Add pair
+                            </span>
+                          </button>
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent text-white text-[10px] px-2 py-1 truncate flex items-center justify-between gap-2">
+                            <span className="truncate">{bg.label}</span>
+                            {usedIn > 0 ? (
+                              <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px]">
+                                {usedIn} pair{usedIn === 1 ? "" : "s"}
+                              </span>
+                            ) : null}
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeUploadedBackground(bg.id);
+                            }}
+                            className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/70 text-white text-xs grid place-items-center hover:bg-red-600 z-10"
+                            aria-label="Remove image"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="mt-3 flex items-center gap-3 flex-wrap">
+                    <button
+                      onClick={() =>
+                        setCfg((prev) => ({
+                          ...prev,
+                          slides: [
+                            ...prev.slides,
+                            ...prev.uploadedBackgrounds.map((bg, i) =>
+                              makeSlide(
+                                `upload:${bg.id}`,
+                                LOGOS[
+                                  (prev.slides.length + i) % LOGOS.length
+                                ].id,
+                              ),
+                            ),
+                          ],
+                        }))
+                      }
+                      className="inline-flex items-center gap-2 rounded-full bg-[var(--color-ink)] text-[var(--color-paper)] px-4 py-1.5 text-xs"
+                    >
+                      + Add all uploaded as pairs
+                    </button>
+                    <span className="text-xs text-[var(--color-muted)]">
+                      Click any image above to add just that one as a new pair.
+                    </span>
+                  </div>
+                </>
               )}
               {bgUploadError ? (
                 <div className="mt-3 text-xs text-red-600" role="alert">
