@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 const methods = [
   {
     label: "Email",
-    value: "hello@goodhumans.co",
-    href: "mailto:hello@goodhumans.co",
+    value: "me@davebrown.co.uk",
+    href: "mailto:me@davebrown.co.uk",
   },
   {
     label: "LinkedIn",

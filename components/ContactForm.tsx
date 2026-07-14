@@ -171,8 +171,8 @@ export default function ContactForm() {
           className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800"
         >
           ✕ {status.message} Please try again, or email us directly at{" "}
-          <a href="mailto:hello@goodhumans.co" className="underline">
-            hello@goodhumans.co
+          <a href="mailto:me@davebrown.co.uk" className="underline">
+            me@davebrown.co.uk
           </a>
           .
         </div>

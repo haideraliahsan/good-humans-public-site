@@ -57,7 +57,7 @@ export default function Footer() {
               Elsewhere
             </div>
             <ul className="space-y-3 text-sm text-white/80">
-              <li><a href="mailto:hello@goodhumans.co" className="hover:opacity-60">hello@goodhumans.co</a></li>
+              <li><a href="mailto:me@davebrown.co.uk" className="hover:opacity-60">me@davebrown.co.uk</a></li>
               <li><a href="#" className="hover:opacity-60">LinkedIn</a></li>
               <li><a href="#" className="hover:opacity-60">Google Meet</a></li>
             </ul>
