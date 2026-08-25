@@ -10,19 +10,6 @@ export default function Hero() {
   return (
     <section className="relative pt-36 md:pt-44 pb-24 md:pb-32 bg-[var(--color-paper)] text-[var(--color-ink)] overflow-hidden">
       <div className="container-x">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease }}
-          className="flex items-center gap-3 text-xs uppercase tracking-[0.22em] text-[var(--color-muted)] mb-10"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          Available for new partnerships — 2026
-        </motion.div>
-
         <h1 className="display-text text-[14vw] sm:text-[10vw] md:text-[8vw] lg:text-[7.5rem] xl:text-[8.5rem] max-w-[20ch]">
           {words.map((w, i) => (
             <motion.span
@@ -91,9 +78,6 @@ export default function Hero() {
               className="absolute inset-y-0 w-1/2 bg-[var(--color-ink)]"
             />
           </div>
-        </div>
-        <div className="hidden md:block text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">
-          (01) — Holding page
         </div>
       </motion.div>
     </section>

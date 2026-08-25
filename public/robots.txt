@@ -3,3 +3,5 @@ Allow: /
 
 Disallow: /video-generation
 Disallow: /video-generation/
+Disallow: /social-posts
+Disallow: /social-posts/
