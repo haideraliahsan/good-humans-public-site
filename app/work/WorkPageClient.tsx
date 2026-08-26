@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
@@ -129,18 +129,19 @@ function WorkRow({ item, index }: { item: WorkItem; index: number }) {
   );
 }
 
-// Shared cycler — bumps `phase` mod total every `intervalMs` so images
-// rotate through fixed positional slots.
-function useCycle(total: number, intervalMs: number) {
+// Shared clock: bumps `phase` mod `slots` every `intervalMs`. Each barrel's
+// current slot is `(barrelIndex + phase) % slots`, so barrels ROTATE through
+// fixed positional slots without ever changing their image.
+function useCycle(slots: number, intervalMs: number) {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
-    if (total <= 1) return;
+    if (slots <= 1) return;
     const id = window.setInterval(
-      () => setPhase((p) => (p + 1) % total),
+      () => setPhase((p) => (p + 1) % slots),
       intervalMs,
     );
     return () => window.clearInterval(id);
-  }, [total, intervalMs]);
+  }, [slots, intervalMs]);
   return phase;
 }
 
@@ -149,106 +150,106 @@ function DeviceStage({ item }: { item: WorkItem }) {
   return <WebStage item={item} />;
 }
 
-// Three SAME-SIZE iPhones. Positions are fixed (front centre, back-left,
-// back-right). Every ~3.8 s the images rotate one slot forward, so each
-// screen slides from back-right → front → back-left over the cycle.
-function MobileStage({ item }: { item: WorkItem }) {
-  const total = item.images.length;
-  const phase = useCycle(total, 3800);
+// ── Mobile: 3 same-size phones physically rotating through 3 slots ──
 
-  const slots = [
-    { key: "left",  x: "-58%", y: "5%", rotate: -6, z: 5,  opacity: 0.9 },
-    { key: "front", x: "0%",   y: "0%", rotate: 0,  z: 20, opacity: 1   },
-    { key: "right", x: "58%",  y: "5%", rotate: 6,  z: 5,  opacity: 0.9 },
-  ] as const;
+type PhoneSlot = {
+  left: string;        // % — the phone's left edge (its centre = left + width/2)
+  top: string;         // %
+  rotate: number;      // degrees
+  zIndex: number;
+};
+
+// Phone width is 34%, so left = 33% centres it (33 + 17 = 50).
+const PHONE_SLOTS: PhoneSlot[] = [
+  { left: "33%", top: "0%",  rotate: 0,  zIndex: 20 }, // front, centred
+  { left: "58%", top: "6%",  rotate: 6,  zIndex: 5  }, // back-right
+  { left: "8%",  top: "6%",  rotate: -6, zIndex: 5  }, // back-left
+];
+
+function MobileStage({ item }: { item: WorkItem }) {
+  const slots = PHONE_SLOTS.length;
+  const phase = useCycle(slots, 3800);
+  const phones = item.images.slice(0, slots);
 
   return (
     <div className="relative w-full" style={{ aspectRatio: "3 / 2" }}>
-      {slots.map((slot, slotIdx) => {
-        const src = item.images[(phase + slotIdx) % total];
+      {phones.map((src, phoneIdx) => {
+        // Each phone's current slot rotates over time — but its src is stable.
+        const slot = PHONE_SLOTS[(phoneIdx + phase) % slots];
         return (
-          <div
-            key={slot.key}
-            className="absolute top-0 left-1/2"
-            style={{
-              transform: `translate(-50%, 0) translate(${slot.x}, ${slot.y}) rotate(${slot.rotate}deg)`,
-              transformOrigin: "center top",
-              zIndex: slot.z,
-              width: "34%",
-              maxWidth: 240,
-              opacity: slot.opacity,
+          <motion.div
+            key={phoneIdx}                        // key by PHONE (stable), not by image
+            className="absolute"
+            style={{ width: "34%", maxWidth: 240 }}
+            initial={false}
+            animate={{
+              left: slot.left,
+              top: slot.top,
+              rotate: slot.rotate,
+              zIndex: slot.zIndex,
             }}
+            transition={{ duration: 0.9, ease }}
           >
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={src}
-                initial={{ opacity: 0, scale: 0.985 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.985 }}
-                transition={{ duration: 0.55, ease }}
-              >
-                <IPhoneFrame
-                  src={src}
-                  maxHeight="none"
-                  style={{ height: "auto", width: "100%" }}
-                />
-              </motion.div>
-            </AnimatePresence>
-          </div>
+            <IPhoneFrame
+              src={src}
+              maxHeight="none"
+              style={{ height: "auto", width: "100%" }}
+            />
+          </motion.div>
         );
       })}
     </div>
   );
 }
 
-// Two SAME-SIZE desktop browsers stacked. Back sits offset up-and-right
-// with slight rotation. Both cycle on the same clock.
-function WebStage({ item }: { item: WorkItem }) {
-  const total = item.images.length;
-  const phase = useCycle(total, 4200);
+// ── Web: 2 same-size desktops physically swapping front↔back ──
 
-  const backSrc  = item.images[(phase + 1) % total];
-  const frontSrc = item.images[(phase + 0) % total];
+type DesktopSlot = {
+  top: string;
+  left: string;
+  rotate: number;
+  zIndex: number;
+  opacity: number;
+};
+
+const DESKTOP_SLOTS: DesktopSlot[] = [
+  { top: "6%",  left: "0%",  rotate: 0,   zIndex: 20, opacity: 1    }, // front
+  { top: "0%",  left: "3.5%", rotate: 1.5, zIndex: 5,  opacity: 0.42 }, // back, up-right
+];
+
+function WebStage({ item }: { item: WorkItem }) {
+  const slots = DESKTOP_SLOTS.length;
+  const phase = useCycle(slots, 4200);
+  const desktops = item.images.slice(0, slots);
 
   return (
-    <div className="relative w-full" style={{ paddingTop: "6%", paddingRight: "6%" }}>
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          top: "0%",
-          right: "0%",
-          width: "100%",
-          zIndex: 5,
-          opacity: 0.42,
-          transform: "translate(3.5%, -3.5%) rotate(1.5deg)",
-        }}
-      >
-        <AnimatePresence mode="wait" initial={false}>
+    // Container aspect matches the cropped screenshot (~1920 × 980) plus room
+    // for the back desktop's offset. Height derived from width via aspect.
+    <div
+      className="relative w-full"
+      style={{ aspectRatio: "1920 / 1120" }}
+    >
+      {desktops.map((src, deskIdx) => {
+        const slot = DESKTOP_SLOTS[(deskIdx + phase) % slots];
+        return (
           <motion.div
-            key={backSrc}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.55, ease }}
+            key={deskIdx}                        // key by DESKTOP (stable), not by image
+            className="absolute"
+            style={{ width: "96%" }}
+            initial={false}
+            animate={{
+              top: slot.top,
+              left: slot.left,
+              rotate: slot.rotate,
+              zIndex: slot.zIndex,
+              opacity: slot.opacity,
+            }}
+            transition={{ duration: 0.9, ease }}
           >
-            <DesktopFrame src={backSrc} alt="" />
+            <DesktopFrame src={src} alt={deskIdx === 0 ? item.client : ""} />
           </motion.div>
-        </AnimatePresence>
-      </div>
-
-      <div className="relative" style={{ zIndex: 10 }}>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={frontSrc}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.55, ease }}
-          >
-            <DesktopFrame src={frontSrc} alt={item.client} />
-          </motion.div>
-        </AnimatePresence>
-      </div>
+        );
+      })}
     </div>
   );
 }

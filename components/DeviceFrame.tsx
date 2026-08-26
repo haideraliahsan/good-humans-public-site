@@ -4,24 +4,16 @@ import React, { useEffect, useState } from "react";
 
 // ── iPhone barrel ──────────────────────────────────────────────────
 //
-// Corner radii are asymmetric percentages (`X% / Y%`). CSS resolves the
-// first value against the border-box WIDTH and the second against the
-// border-box HEIGHT — so if we want a genuine circular quarter (real
-// rounded-rectangle) on a tall aspect, Y must equal X × (W/H).
+// Real-rounded corners use asymmetric border-radius `X% / Y%` so the
+// pixel radius is equal on both axes despite the tall 1170 : 2532 aspect.
 //
-// For iPhone 15 Pro aspect 1170 : 2532  (W/H ≈ 0.462):
-//   outer body 14.5% of width → 14.5% / 6.7%   (≈ 55 pt at native res)
-//   ink ring   12.7% of width → 12.7% / 5.9%
-//   glass      11.5% of width → 11.5% / 5.3%
-//
-// The status bar reserves its own row (flex column, not overlay) and its
-// background is colour-sampled from the image top row so it seams cleanly
-// into the app content.
+// Thick pure-ink bezel (2.6% of frame width on every side) with a very
+// fine highlight on the top edge to hint at the glass meeting the body.
+// The status bar reserves its own row above the screen (flex column) and
+// samples the image's top colour so it seams cleanly into the app.
 
-const STATUS_BAR_PCT = 5.4;   // % of the screen height for the fake status bar
+const STATUS_BAR_PCT = 5.4;
 const IPHONE_ASPECT_WH = 1170 / 2532; // ≈ 0.462
-
-// asymmetric border-radius helper: keep pixel-equal corners on a tall aspect
 const asymRadius = (xPct: number) =>
   `${xPct}% / ${(xPct * IPHONE_ASPECT_WH).toFixed(2)}%`;
 
@@ -53,89 +45,76 @@ export function IPhoneFrame({
         ...style,
       }}
     >
-      {/* Titanium body — matte, slim, editorial */}
+      {/* Thick pure-ink bezel */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          borderRadius: asymRadius(14.5),
-          padding: "1.0%",
-          background: "#22242A",
+          borderRadius: asymRadius(15.2),
+          padding: "2.6%",
+          background: "#0A0A0A",
           boxShadow: [
-            "inset 0 0 0 0.5px rgba(255,255,255,0.18)",
-            "inset 0 -8px 20px rgba(0,0,0,0.35)",
-            "0 24px 48px rgba(10,10,10,0.14)",
-            "0 60px 120px rgba(10,10,10,0.10)",
+            "inset 0 0 0 0.5px rgba(255,255,255,0.08)",   // fine top-edge highlight
+            "0 24px 48px rgba(10,10,10,0.16)",
+            "0 60px 120px rgba(10,10,10,0.12)",
           ].join(", "),
         }}
       >
-        {/* Thin ink ring between titanium and glass */}
+        {/* Screen glass — flex column so status bar pushes image down */}
         <div
           style={{
             position: "relative",
             width: "100%",
             height: "100%",
-            borderRadius: asymRadius(12.7),
-            padding: "0.7%",
-            background: "#0A0A0A",
+            borderRadius: asymRadius(12.4),
+            overflow: "hidden",
+            background: statusBg,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          {/* Screen — flex column so status bar pushes the image down */}
+          {hideStatus ? null : <StatusBarIOS bg={statusBg} fg={statusFg} />}
+
           <div
             style={{
               position: "relative",
-              width: "100%",
-              height: "100%",
-              borderRadius: asymRadius(11.5),
+              flex: 1,
+              minHeight: 0,
               overflow: "hidden",
               background: statusBg,
-              display: "flex",
-              flexDirection: "column",
             }}
           >
-            {hideStatus ? null : <StatusBarIOS bg={statusBg} fg={statusFg} />}
-
-            <div
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt={alt}
+              draggable={false}
               style={{
-                position: "relative",
-                flex: 1,
-                minHeight: 0,
-                overflow: "hidden",
-                background: statusBg,
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={src}
-                alt={alt}
-                draggable={false}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  objectPosition: "top",
-                }}
-              />
-            </div>
-
-            {/* Dynamic island */}
-            <div
-              style={{
-                position: "absolute",
-                top: `${STATUS_BAR_PCT * 0.28}%`,
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: "30%",
-                height: `${STATUS_BAR_PCT * 0.58}%`,
-                minHeight: 12,
-                borderRadius: 9999,
-                background: "#000",
-                pointerEvents: "none",
-                zIndex: 3,
+                display: "block",
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "top",
               }}
             />
           </div>
+
+          {/* Dynamic island */}
+          <div
+            style={{
+              position: "absolute",
+              top: `${STATUS_BAR_PCT * 0.28}%`,
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "30%",
+              height: `${STATUS_BAR_PCT * 0.58}%`,
+              minHeight: 12,
+              borderRadius: 9999,
+              background: "#000",
+              pointerEvents: "none",
+              zIndex: 3,
+            }}
+          />
         </div>
       </div>
     </div>
@@ -187,7 +166,6 @@ function useTopColour(src: string | null): { color: string; luminance: number } 
   return result;
 }
 
-// Fake iOS status bar: smaller time text, WiFi + battery only (no cell bars).
 function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
   return (
     <div
@@ -241,9 +219,10 @@ function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
 
 // ── Desktop browser barrel ─────────────────────────────────────────
 //
-// Minimal editorial title bar — tiny traffic-lights + a slim empty URL
-// pill (no domain text). Chrome is now ~24 px tall so it barely takes any
-// vertical space; the screenshot pushes down cleanly below it.
+// Wrapped in a thick pure-ink outer bezel (7 px) so it reads as a real
+// mounted display rather than a flat rectangle. Inside: slim title bar
+// with three traffic-lights + empty URL pill (no domain), then the
+// screenshot flush below.
 
 export function DesktopFrame({
   src,
@@ -253,7 +232,7 @@ export function DesktopFrame({
 }: {
   src: string;
   alt?: string;
-  siteUrl?: string;         // deliberately accepted + ignored (API compat)
+  siteUrl?: string;         // API compat — ignored
   className?: string;
   style?: React.CSSProperties;
 }) {
@@ -261,39 +240,43 @@ export function DesktopFrame({
     <div
       className={`relative w-full ${className}`}
       style={{
-        boxShadow:
-          "0 24px 48px -10px rgba(10,10,10,0.16), 0 60px 120px -30px rgba(10,10,10,0.12)",
-        borderRadius: 12,
+        // Thick black outer bezel — the "monitor frame"
+        padding: 7,
+        background: "#0A0A0A",
+        borderRadius: 16,
+        boxShadow: [
+          "inset 0 0 0 0.5px rgba(255,255,255,0.06)",
+          "0 24px 48px -10px rgba(10,10,10,0.18)",
+          "0 60px 120px -30px rgba(10,10,10,0.12)",
+        ].join(", "),
         ...style,
       }}
     >
+      {/* Inner container — chrome + screenshot */}
       <div
         style={{
           width: "100%",
-          borderRadius: 12,
+          borderRadius: 10,
           overflow: "hidden",
           background: "#0A0A0A",
-          border: "1px solid rgba(0,0,0,0.08)",
         }}
       >
-        {/* Slim title bar — small dots + slim empty pill */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 8,
-            padding: "6px 10px",
+            padding: "7px 10px",
             background: "linear-gradient(180deg, #1B1D22 0%, #101216 100%)",
             borderBottom: "1px solid rgba(255,255,255,0.06)",
           }}
         >
-          <div style={{ display: "flex", gap: 4.5 }}>
-            <span style={dot("#FF5F57", 9)} />
-            <span style={dot("#FEBC2E", 9)} />
-            <span style={dot("#28C840", 9)} />
+          <div style={{ display: "flex", gap: 5 }}>
+            <span style={dot("#FF5F57", 10)} />
+            <span style={dot("#FEBC2E", 10)} />
+            <span style={dot("#28C840", 10)} />
           </div>
 
-          {/* Slim empty pill — balanced, no text */}
           <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
             <div
               style={{
