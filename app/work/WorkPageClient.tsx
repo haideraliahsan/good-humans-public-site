@@ -150,20 +150,25 @@ function DeviceStage({ item }: { item: WorkItem }) {
   return <WebStage item={item} />;
 }
 
-// ── Mobile: 3 same-size phones physically rotating through 3 slots ──
+// ── Mobile: 3 phones physically rotating through 3 slots.
+// Front slot renders ~15% larger than the back two so the "hero" reads
+// clearly. Backs are the same size as each other.
 
 type PhoneSlot = {
-  left: string;        // % — the phone's left edge (its centre = left + width/2)
-  top: string;         // %
-  rotate: number;      // degrees
+  left: string;        // % — the phone's left edge (centre = left + width/2)
+  top: string;
+  rotate: number;
   zIndex: number;
+  scale: number;
 };
 
-// Phone width is 34%, so left = 33% centres it (33 + 17 = 50).
+// All phones share the same base width (32%). `left` centres each about a
+// third of the container. Because the front slot scales up, its `left`
+// shifts a touch to compensate for the wider rendered box.
 const PHONE_SLOTS: PhoneSlot[] = [
-  { left: "33%", top: "0%",  rotate: 0,  zIndex: 20 }, // front, centred
-  { left: "58%", top: "6%",  rotate: 6,  zIndex: 5  }, // back-right
-  { left: "8%",  top: "6%",  rotate: -6, zIndex: 5  }, // back-left
+  { left: "31%", top: "0%",  rotate: 0,  zIndex: 20, scale: 1.15 }, // front, centred, bigger
+  { left: "60%", top: "8%",  rotate: 6,  zIndex: 5,  scale: 1    }, // back-right
+  { left: "8%",  top: "8%",  rotate: -6, zIndex: 5,  scale: 1    }, // back-left
 ];
 
 function MobileStage({ item }: { item: WorkItem }) {
@@ -174,18 +179,18 @@ function MobileStage({ item }: { item: WorkItem }) {
   return (
     <div className="relative w-full" style={{ aspectRatio: "3 / 2" }}>
       {phones.map((src, phoneIdx) => {
-        // Each phone's current slot rotates over time — but its src is stable.
         const slot = PHONE_SLOTS[(phoneIdx + phase) % slots];
         return (
           <motion.div
-            key={phoneIdx}                        // key by PHONE (stable), not by image
-            className="absolute"
-            style={{ width: "34%", maxWidth: 240 }}
+            key={phoneIdx}
+            className="absolute origin-top"
+            style={{ width: "32%", maxWidth: 230 }}
             initial={false}
             animate={{
               left: slot.left,
               top: slot.top,
               rotate: slot.rotate,
+              scale: slot.scale,
               zIndex: slot.zIndex,
             }}
             transition={{ duration: 0.9, ease }}
@@ -202,19 +207,22 @@ function MobileStage({ item }: { item: WorkItem }) {
   );
 }
 
-// ── Web: 2 same-size desktops physically swapping front↔back ──
+// ── Web: 3 same-size desktops physically rotating through 3 slots.
+// All full opacity (no dimming). Back-left / back-right peek out from
+// behind the front desktop like a card fan.
 
 type DesktopSlot = {
   top: string;
   left: string;
   rotate: number;
   zIndex: number;
-  opacity: number;
+  scale: number;
 };
 
 const DESKTOP_SLOTS: DesktopSlot[] = [
-  { top: "6%",  left: "0%",  rotate: 0,   zIndex: 20, opacity: 1    }, // front
-  { top: "0%",  left: "3.5%", rotate: 1.5, zIndex: 5,  opacity: 0.42 }, // back, up-right
+  { top: "12%", left: "6%",   rotate: 0,    zIndex: 20, scale: 1 }, // front, centred, prominent
+  { top: "0%",  left: "0%",   rotate: -1.5, zIndex: 5,  scale: 1 }, // back-left, peeks out left
+  { top: "0%",  left: "12%",  rotate: 1.5,  zIndex: 5,  scale: 1 }, // back-right, peeks out right
 ];
 
 function WebStage({ item }: { item: WorkItem }) {
@@ -223,26 +231,27 @@ function WebStage({ item }: { item: WorkItem }) {
   const desktops = item.images.slice(0, slots);
 
   return (
-    // Container aspect matches the cropped screenshot (~1920 × 980) plus room
-    // for the back desktop's offset. Height derived from width via aspect.
+    // Container aspect accommodates the fan: back desktops sit at top,
+    // front sits ~12% lower with a slight left shift. Extra height keeps
+    // everything inside the row and clear of the text column.
     <div
       className="relative w-full"
-      style={{ aspectRatio: "1920 / 1120" }}
+      style={{ aspectRatio: "1920 / 1240" }}
     >
       {desktops.map((src, deskIdx) => {
         const slot = DESKTOP_SLOTS[(deskIdx + phase) % slots];
         return (
           <motion.div
-            key={deskIdx}                        // key by DESKTOP (stable), not by image
-            className="absolute"
-            style={{ width: "96%" }}
+            key={deskIdx}
+            className="absolute origin-top"
+            style={{ width: "88%" }}
             initial={false}
             animate={{
               top: slot.top,
               left: slot.left,
               rotate: slot.rotate,
+              scale: slot.scale,
               zIndex: slot.zIndex,
-              opacity: slot.opacity,
             }}
             transition={{ duration: 0.9, ease }}
           >
