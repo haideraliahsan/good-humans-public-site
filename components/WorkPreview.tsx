@@ -3,20 +3,19 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { work, type WorkItem } from "@/lib/work";
+import { DesktopFrame, IPhoneFrame } from "./DeviceFrame";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-// Map the accent key on each item to a soft themed background/border pair.
-// Kept mono-brand-safe: no bright fills, just tonal shifts against paper/ink.
 const ACCENTS: Record<
   WorkItem["accent"],
-  { bg: string; border: string; label: string }
+  { card: string; stage: string; label: string; tagSep: string }
 > = {
-  ink:     { bg: "bg-[var(--color-ink)] text-[var(--color-paper)]", border: "border-transparent",         label: "text-white/55" },
-  paper:   { bg: "bg-white",                                        border: "border-[var(--color-line)]", label: "text-[var(--color-muted)]" },
-  blue:    { bg: "bg-[#EEF3FF]",                                    border: "border-[#D6E1FF]",           label: "text-[#3A4B8E]" },
-  warm:    { bg: "bg-[#F7F3EB]",                                    border: "border-[#EBE2CE]",           label: "text-[#8A7350]" },
-  emerald: { bg: "bg-[#EDF7EE]",                                    border: "border-[#CDE7CE]",           label: "text-[#3F7B48]" },
+  ink:     { card: "bg-[var(--color-ink)] text-[var(--color-paper)]", stage: "bg-[#181A20]",                 label: "text-white/60",             tagSep: "text-white/30" },
+  paper:   { card: "bg-white text-[var(--color-ink)]",                stage: "bg-[var(--color-line)]",       label: "text-[var(--color-muted)]", tagSep: "text-[var(--color-line)]" },
+  blue:    { card: "bg-[#EEF3FF] text-[var(--color-ink)]",            stage: "bg-[linear-gradient(160deg,#0E1B3A_0%,#1E3AA8_100%)]", label: "text-[#3A4B8E]", tagSep: "text-[#3A4B8E]/30" },
+  warm:    { card: "bg-[#F7F3EB] text-[var(--color-ink)]",            stage: "bg-[linear-gradient(160deg,#3A2F1E_0%,#8A6A32_100%)]", label: "text-[#8A7350]", tagSep: "text-[#8A7350]/30" },
+  emerald: { card: "bg-[#EDF7EE] text-[var(--color-ink)]",            stage: "bg-[linear-gradient(160deg,#062E22_0%,#0F5D45_100%)]", label: "text-[#3F7B48]", tagSep: "text-[#3F7B48]/30" },
 };
 
 export default function WorkPreview() {
@@ -33,15 +32,15 @@ export default function WorkPreview() {
             </h2>
           </div>
           <p className="text-base md:text-lg text-[var(--color-muted)] max-w-[42ch]">
-            A snapshot of recent work with founders and modern teams — booking
-            products, dispatch consoles, brand systems, and the growth engines
-            underneath.
+            A snapshot of recent work with founders and modern teams — memory
+            products, property portals, and ecommerce growth engines.
           </p>
         </div>
 
         <ul className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
           {work.slice(0, 3).map((item, i) => {
             const a = ACCENTS[item.accent] ?? ACCENTS.paper;
+            const hero = item.images?.[0];
             return (
               <motion.li
                 key={item.slug}
@@ -52,43 +51,70 @@ export default function WorkPreview() {
               >
                 <Link
                   href={`/work/#${item.slug}`}
-                  className={`group h-full rounded-2xl border ${a.border} ${a.bg} p-6 md:p-7 flex flex-col gap-5 min-h-[260px] transition-transform hover:-translate-y-0.5`}
+                  className={`group h-full rounded-2xl ${a.card} overflow-hidden flex flex-col transition-transform hover:-translate-y-0.5`}
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <span className={`text-[11px] uppercase tracking-[0.22em] ${a.label}`}>
-                      {item.client}
-                    </span>
-                    <span className={`text-[11px] tabular-nums ${a.label}`}>{item.year}</span>
+                  {/* Stage — a dark tinted surface with the device floating on it */}
+                  <div
+                    className={`relative w-full ${a.stage} overflow-hidden grid place-items-center`}
+                    style={{ aspectRatio: "4 / 3", padding: "6% 10%" }}
+                  >
+                    {hero ? (
+                      item.deviceKind === "mobile" ? (
+                        <IPhoneFrame
+                          src={hero}
+                          alt={item.client}
+                          maxHeight="100%"
+                          style={{ height: "100%" }}
+                        />
+                      ) : (
+                        <div className="w-full">
+                          <DesktopFrame
+                            src={hero}
+                            alt={item.client}
+                            siteUrl={item.siteUrl}
+                          />
+                        </div>
+                      )
+                    ) : null}
                   </div>
 
-                  <div className="flex-1 flex items-end">
-                    <h3 className="display-text text-2xl md:text-[26px] leading-[1.1] tracking-tight">
-                      {item.title}
-                    </h3>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex flex-wrap gap-1.5">
-                      {item.tags.map((t) => (
-                        <span
-                          key={t}
-                          className={`text-[10px] uppercase tracking-[0.2em] ${a.label}`}
-                        >
-                          {t}
-                        </span>
-                      )).reduce<React.ReactNode[]>((acc, node, idx) => {
-                        if (idx === 0) return [node];
-                        return [...acc, <span key={`sep-${idx}`} className={`text-[10px] ${a.label}`}>·</span>, node];
-                      }, [])}
+                  <div className="p-5 md:p-6 flex-1 flex flex-col gap-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className={`text-[11px] uppercase tracking-[0.22em] ${a.label}`}>
+                        {item.client}
+                      </span>
+                      {item.year ? (
+                        <span className={`text-[11px] tabular-nums ${a.label}`}>{item.year}</span>
+                      ) : null}
                     </div>
-                    <span
-                      className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-current/20 transition-transform group-hover:translate-x-0.5"
-                      aria-hidden
-                    >
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M3 7h8m0 0L7.5 3.5M11 7l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
+
+                    <div className="flex-1">
+                      {item.tagline ? (
+                        <div className={`text-sm italic mb-2 ${a.label}`}>{item.tagline}</div>
+                      ) : null}
+                      <h3 className="display-text text-xl md:text-[22px] leading-[1.15] tracking-tight">
+                        {item.title}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {item.tags.map((t, idx) => (
+                          <span key={t} className={`text-[10px] uppercase tracking-[0.22em] ${a.label}`}>
+                            {idx > 0 ? <span className={`mr-1.5 ${a.tagSep}`}>·</span> : null}
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                      <span
+                        className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-current/20 transition-transform group-hover:translate-x-0.5"
+                        aria-hidden
+                      >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <path d="M3 7h8m0 0L7.5 3.5M11 7l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </div>
                   </div>
                 </Link>
               </motion.li>

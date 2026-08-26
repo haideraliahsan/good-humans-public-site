@@ -1,57 +1,100 @@
 // Case-study registry — powers both the home-page WorkPreview strip and the
-// /work index page. Swap the placeholder entries with real projects as they
-// go live; the shape is stable.
+// /work index page. Each item names a *deviceKind* so the UI knows how to
+// frame it (iPhone barrel for mobile apps, desktop browser for web portals).
 
 export type WorkTag = "Web" | "App" | "Brand" | "Design" | "Growth";
+export type DeviceKind = "mobile" | "web";
 
 export type WorkItem = {
   slug: string;
   client: string;
+  tagline?: string;
   title: string;
-  summary: string;              // short line — used on the card
-  description?: string;         // longer paragraph for the /work detail rows
-  year: string;
+  summary: string;
+  description?: string;
+  year?: string;
   tags: WorkTag[];
   accent: "ink" | "paper" | "blue" | "warm" | "emerald";
-  href?: string;                // outbound link if the project has a public URL
+  href?: string;
+
+  // How to present the media
+  deviceKind: DeviceKind;
+  // For desktop mockups, the URL shown in the fake address bar
+  siteUrl?: string;
+
+  // Cropped, brand-safe screenshots. First entry is the hero. Path is
+  // absolute under /public.
+  images: string[];
 };
 
 export const work: WorkItem[] = [
   {
-    slug: "sunset-padel-booking",
-    client: "Sunset Padel Social",
-    title: "Membership platform for a growing padel community.",
+    slug: "dont-forget-me",
+    client: "Don't Forget Me",
+    tagline: "Your life story, preserved forever.",
+    title: "A digital memory companion for a lifetime of moments.",
     summary:
-      "Booking, memberships and a friendly host-led events layer — shipped in six weeks.",
+      "Document daily life, preserve memories, and share a lasting legacy with family.",
     description:
-      "We partnered with the founder to design and build a members-first booking product for weekly padel socials — mixed doubles, drills, and events. Custom Stripe checkout, host tools and a lightweight CRM. From first call to public launch in six weeks.",
-    year: "2026",
+      "A digital memory companion that helps people document daily life, preserve memories, connect with family, manage care needs, and create a lasting legacy.",
     tags: ["Web", "App", "Design"],
     accent: "emerald",
+    deviceKind: "mobile",
+    images: [
+      "/work/dont-forget-me/screen-01.jpg",
+      "/work/dont-forget-me/screen-02.jpg",
+      "/work/dont-forget-me/screen-03.jpg",
+      "/work/dont-forget-me/screen-04.jpg",
+      "/work/dont-forget-me/screen-05.jpg",
+      "/work/dont-forget-me/screen-06.jpg",
+    ],
   },
   {
-    slug: "field-service-rebuild",
-    client: "Field-service SaaS",
-    title: "A calmer product for a scaling operations team.",
+    slug: "rockliving",
+    client: "Rockliving",
+    title: "A new digital home for a UK proptech and investment company.",
     summary:
-      "Rebuilt the dispatch console, cut task time by 42%, and grew MRR quarter on quarter.",
+      "Rebuilt the marketing sites and customer portal into one modern, intuitive platform.",
     description:
-      "A mid-market field-service SaaS was stuck on a legacy console — hard to hire against, harder to sell. We led a discovery, shipped a new dispatch UX, and set up the analytics + growth loops that helped the team break through their first plateau.",
-    year: "2026",
-    tags: ["Web", "Design", "Growth"],
+      "We built the new websites and customer portal for Rockliving, a UK-based property technology and investment company. The new digital experience brings Rockliving's brand, property investment offering and customer services together in one modern, intuitive platform, making it easier for customers to explore opportunities, manage their investments and engage with the business online.",
+    tags: ["Web", "Design"],
     accent: "blue",
+    deviceKind: "web",
+    siteUrl: "rockliving.co.uk",
+    images: [
+      "/work/rockliving/screen-01.jpg",
+      "/work/rockliving/screen-02.jpg",
+      "/work/rockliving/screen-03.jpg",
+      "/work/rockliving/screen-04.jpg",
+      "/work/rockliving/screen-05.jpg",
+      "/work/rockliving/screen-06.jpg",
+      "/work/rockliving/screen-07.jpg",
+    ],
   },
   {
-    slug: "founder-brand-refresh",
-    client: "Boutique advisory firm",
-    title: "A brand system built for a founder's second act.",
+    slug: "static-devices",
+    client: "Static Devices",
+    title: "Growing ecommerce performance through digital + marketing.",
     summary:
-      "Positioning, identity and a new marketing site — all in the founder's voice.",
+      "Optimising the online customer journey and driving targeted campaigns for measurable growth.",
     description:
-      "The founder of a boutique advisory firm was rebuilding their offering after a first exit. We shaped the positioning, designed a new identity system and launched a marketing site that reflects the calmer, more considered practice they wanted to run this time.",
-    year: "2025",
-    tags: ["Brand", "Design", "Web"],
+      "We help Static Devices improve and grow their ecommerce performance through a combination of digital expertise and strategic marketing services. From optimising the online customer journey and improving conversion to driving targeted campaigns and building sustainable growth, we work across both digital and marketing to deliver measurable ecommerce results.",
+    tags: ["Web", "Growth"],
     accent: "warm",
+    deviceKind: "web",
+    siteUrl: "staticdevices.co.uk",
+    images: [
+      "/work/static-devices/screen-01.jpg",
+      "/work/static-devices/screen-02.jpg",
+      "/work/static-devices/screen-03.jpg",
+      "/work/static-devices/screen-04.jpg",
+      "/work/static-devices/screen-05.jpg",
+      "/work/static-devices/screen-06.jpg",
+      "/work/static-devices/screen-07.jpg",
+      "/work/static-devices/screen-08.jpg",
+      "/work/static-devices/screen-09.jpg",
+      "/work/static-devices/screen-10.jpg",
+    ],
   },
 ];
 
