@@ -7,9 +7,9 @@ import { DesktopFrame, IPhoneFrame } from "./DeviceFrame";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-// One brand-mono stage for every card, matching the /work page. Card outer
-// backgrounds stay tonal (soft blue / cream / emerald) for editorial contrast
-// with the ink stage that hosts the device.
+// Card outer backgrounds stay tonal (soft blue / cream / emerald) for
+// editorial contrast. The device floats directly on that card background —
+// no nested dark ink stage.
 const ACCENTS: Record<
   WorkItem["accent"],
   { card: string; label: string; tagSep: string }
@@ -19,13 +19,6 @@ const ACCENTS: Record<
   blue:    { card: "bg-[#EEF3FF] text-[var(--color-ink)]",            label: "text-[#3A4B8E]",            tagSep: "text-[#3A4B8E]/30" },
   warm:    { card: "bg-[#F7F3EB] text-[var(--color-ink)]",            label: "text-[#8A7350]",            tagSep: "text-[#8A7350]/30" },
   emerald: { card: "bg-[#EDF7EE] text-[var(--color-ink)]",            label: "text-[#3F7B48]",            tagSep: "text-[#3F7B48]/30" },
-};
-
-// Shared ink stage — same brand as the /work page.
-const STAGE_STYLE: React.CSSProperties = {
-  background:
-    "radial-gradient(600px 400px at 50% 20%, #1E2028 0%, #0F1116 55%, #08080B 100%)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
 };
 
 export default function WorkPreview() {
@@ -63,16 +56,12 @@ export default function WorkPreview() {
                   href={`/work/#${item.slug}`}
                   className={`group h-full rounded-2xl ${a.card} overflow-hidden flex flex-col transition-transform hover:-translate-y-0.5`}
                 >
-                  {/* Ink stage — device floats on top */}
+                  {/* Device floats on the card's tinted background — no nested stage */}
                   <div
-                    className="relative w-full overflow-hidden grid place-items-center"
+                    className="relative w-full grid place-items-center overflow-hidden"
                     style={{
-                      ...STAGE_STYLE,
                       aspectRatio: "4 / 3",
-                      padding:
-                        item.deviceKind === "mobile"
-                          ? "6% 12%"
-                          : "10% 8% 8%",
+                      padding: item.deviceKind === "mobile" ? "10% 24% 0" : "10% 8% 8%",
                     }}
                   >
                     {hero ? (
@@ -85,11 +74,7 @@ export default function WorkPreview() {
                         />
                       ) : (
                         <div className="w-full">
-                          <DesktopFrame
-                            src={hero}
-                            alt={item.client}
-                            siteUrl={item.siteUrl}
-                          />
+                          <DesktopFrame src={hero} alt={item.client} />
                         </div>
                       )
                     ) : null}
