@@ -3,12 +3,27 @@
 import React, { useEffect, useState } from "react";
 
 // ── iPhone barrel ──────────────────────────────────────────────────
-// Refined iPhone 15 Pro mockup: matte-titanium body (no gaudy gradient),
-// thin dark inner ring, dynamic-island pill. The status bar reserves its
-// own row above the image (flex column, not overlay) and samples the
-// image's top-row colour so it merges seamlessly into the app content.
+//
+// Corner radii are asymmetric percentages (`X% / Y%`). CSS resolves the
+// first value against the border-box WIDTH and the second against the
+// border-box HEIGHT — so if we want a genuine circular quarter (real
+// rounded-rectangle) on a tall aspect, Y must equal X × (W/H).
+//
+// For iPhone 15 Pro aspect 1170 : 2532  (W/H ≈ 0.462):
+//   outer body 14.5% of width → 14.5% / 6.7%   (≈ 55 pt at native res)
+//   ink ring   12.7% of width → 12.7% / 5.9%
+//   glass      11.5% of width → 11.5% / 5.3%
+//
+// The status bar reserves its own row (flex column, not overlay) and its
+// background is colour-sampled from the image top row so it seams cleanly
+// into the app content.
 
 const STATUS_BAR_PCT = 5.4;   // % of the screen height for the fake status bar
+const IPHONE_ASPECT_WH = 1170 / 2532; // ≈ 0.462
+
+// asymmetric border-radius helper: keep pixel-equal corners on a tall aspect
+const asymRadius = (xPct: number) =>
+  `${xPct}% / ${(xPct * IPHONE_ASPECT_WH).toFixed(2)}%`;
 
 export function IPhoneFrame({
   src,
@@ -43,8 +58,8 @@ export function IPhoneFrame({
         style={{
           position: "absolute",
           inset: 0,
-          borderRadius: "13.4%",
-          padding: "1.05%",
+          borderRadius: asymRadius(14.5),
+          padding: "1.0%",
           background: "#22242A",
           boxShadow: [
             "inset 0 0 0 0.5px rgba(255,255,255,0.18)",
@@ -60,18 +75,18 @@ export function IPhoneFrame({
             position: "relative",
             width: "100%",
             height: "100%",
-            borderRadius: "12.2%",
+            borderRadius: asymRadius(12.7),
             padding: "0.7%",
             background: "#0A0A0A",
           }}
         >
-          {/* Screen — flex column so the status bar pushes the image down */}
+          {/* Screen — flex column so status bar pushes the image down */}
           <div
             style={{
               position: "relative",
               width: "100%",
               height: "100%",
-              borderRadius: "11.4%",
+              borderRadius: asymRadius(11.5),
               overflow: "hidden",
               background: statusBg,
               display: "flex",
@@ -104,16 +119,16 @@ export function IPhoneFrame({
               />
             </div>
 
-            {/* Dynamic island — sits inside the status bar area */}
+            {/* Dynamic island */}
             <div
               style={{
                 position: "absolute",
                 top: `${STATUS_BAR_PCT * 0.28}%`,
                 left: "50%",
                 transform: "translateX(-50%)",
-                width: "32%",
-                height: `${STATUS_BAR_PCT * 0.6}%`,
-                minHeight: 14,
+                width: "30%",
+                height: `${STATUS_BAR_PCT * 0.58}%`,
+                minHeight: 12,
                 borderRadius: 9999,
                 background: "#000",
                 pointerEvents: "none",
@@ -127,7 +142,7 @@ export function IPhoneFrame({
   );
 }
 
-// Client-side top-row colour sampler — returns average RGB + 0..1 luminance.
+// Client-side top-row colour sampler.
 function useTopColour(src: string | null): { color: string; luminance: number } | null {
   const [result, setResult] = useState<{ color: string; luminance: number } | null>(null);
 
@@ -172,6 +187,7 @@ function useTopColour(src: string | null): { color: string; luminance: number } 
   return result;
 }
 
+// Fake iOS status bar: smaller time text, WiFi + battery only (no cell bars).
 function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
   return (
     <div
@@ -191,34 +207,29 @@ function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
         letterSpacing: "-0.02em",
       }}
     >
-      <div style={{ fontSize: "clamp(9px, 2.0vh, 20px)", lineHeight: 1, minWidth: "22%" }}>
+      <div style={{ fontSize: "clamp(7px, 1.4vh, 13px)", lineHeight: 1, minWidth: "22%" }}>
         9:41
       </div>
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "clamp(3px, 0.7vh, 7px)",
+          gap: "clamp(3px, 0.7vh, 6px)",
           minWidth: "22%",
           justifyContent: "flex-end",
         }}
       >
-        <svg viewBox="0 0 22 14" fill="currentColor" aria-hidden
-             style={{ height: "clamp(7px, 1.3vh, 14px)", width: "auto" }}>
-          <rect x="0"  y="9" width="3" height="5"  rx="0.6" />
-          <rect x="5"  y="6" width="3" height="8"  rx="0.6" />
-          <rect x="10" y="3" width="3" height="11" rx="0.6" />
-          <rect x="15" y="0" width="3" height="14" rx="0.6" />
-        </svg>
+        {/* wifi */}
         <svg viewBox="0 0 18 14" fill="none" aria-hidden
-             style={{ height: "clamp(7px, 1.3vh, 14px)", width: "auto" }}>
+             style={{ height: "clamp(6px, 1.1vh, 11px)", width: "auto" }}>
           <path d="M1 5 A11 11 0 0 1 17 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           <path d="M4 8 A7 7 0 0 1 14 8"   stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           <path d="M7 11 A3 3 0 0 1 11 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           <circle cx="9" cy="13" r="1" fill="currentColor" />
         </svg>
+        {/* battery */}
         <svg viewBox="0 0 26 12" fill="none" aria-hidden
-             style={{ height: "clamp(6px, 1.1vh, 12px)", width: "auto" }}>
+             style={{ height: "clamp(5px, 0.9vh, 9px)", width: "auto" }}>
           <rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" strokeOpacity="0.5" fill="none" />
           <rect x="2"   y="2"   width="17" height="8"  rx="1.5" fill="currentColor" />
           <rect x="23"  y="4"   width="2"  height="4"  rx="0.6" fill="currentColor" fillOpacity="0.5" />
@@ -229,10 +240,10 @@ function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
 }
 
 // ── Desktop browser barrel ─────────────────────────────────────────
-// Minimal editorial browser: three unobtrusive traffic-lights, an empty
-// placeholder pill (no domain), thin hairline separating chrome from
-// content, editorial soft shadow. No visual noise — the site itself is
-// the star, not the URL bar.
+//
+// Minimal editorial title bar — tiny traffic-lights + a slim empty URL
+// pill (no domain text). Chrome is now ~24 px tall so it barely takes any
+// vertical space; the screenshot pushes down cleanly below it.
 
 export function DesktopFrame({
   src,
@@ -242,7 +253,7 @@ export function DesktopFrame({
 }: {
   src: string;
   alt?: string;
-  siteUrl?: string;         // deliberately accepted + ignored (kept for API compat)
+  siteUrl?: string;         // deliberately accepted + ignored (API compat)
   className?: string;
   style?: React.CSSProperties;
 }) {
@@ -252,56 +263,54 @@ export function DesktopFrame({
       style={{
         boxShadow:
           "0 24px 48px -10px rgba(10,10,10,0.16), 0 60px 120px -30px rgba(10,10,10,0.12)",
-        borderRadius: 14,
+        borderRadius: 12,
         ...style,
       }}
     >
       <div
         style={{
           width: "100%",
-          borderRadius: 14,
+          borderRadius: 12,
           overflow: "hidden",
           background: "#0A0A0A",
           border: "1px solid rgba(0,0,0,0.08)",
         }}
       >
-        {/* Minimal title bar — traffic lights + empty placeholder pill */}
+        {/* Slim title bar — small dots + slim empty pill */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
-            padding: "10px 14px",
+            gap: 8,
+            padding: "6px 10px",
             background: "linear-gradient(180deg, #1B1D22 0%, #101216 100%)",
             borderBottom: "1px solid rgba(255,255,255,0.06)",
           }}
         >
-          {/* Traffic lights */}
-          <div style={{ display: "flex", gap: 6, marginRight: 6 }}>
-            <span style={dot("#FF5F57")} />
-            <span style={dot("#FEBC2E")} />
-            <span style={dot("#28C840")} />
+          <div style={{ display: "flex", gap: 4.5 }}>
+            <span style={dot("#FF5F57", 9)} />
+            <span style={dot("#FEBC2E", 9)} />
+            <span style={dot("#28C840", 9)} />
           </div>
 
-          {/* Empty placeholder pill — visual balance, no domain text */}
+          {/* Slim empty pill — balanced, no text */}
           <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
             <div
               style={{
-                width: "42%",
-                minWidth: 80,
-                height: 22,
+                width: "38%",
+                minWidth: 60,
+                height: 12,
                 borderRadius: 999,
                 background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.04)",
               }}
             />
           </div>
 
-          {/* Right-side spacer dots to balance traffic lights */}
-          <div style={{ display: "flex", gap: 4, opacity: 0.28, marginLeft: 6 }}>
-            <span style={dot("#FFFFFF", 3)} />
-            <span style={dot("#FFFFFF", 3)} />
-            <span style={dot("#FFFFFF", 3)} />
+          <div style={{ display: "flex", gap: 3, opacity: 0.28 }}>
+            <span style={dot("#FFFFFF", 2.5)} />
+            <span style={dot("#FFFFFF", 2.5)} />
+            <span style={dot("#FFFFFF", 2.5)} />
           </div>
         </div>
 
@@ -319,7 +328,7 @@ export function DesktopFrame({
   );
 }
 
-function dot(color: string, size = 12): React.CSSProperties {
+function dot(color: string, size = 10): React.CSSProperties {
   return {
     display: "inline-block",
     width: size,
