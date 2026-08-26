@@ -7,15 +7,25 @@ import { DesktopFrame, IPhoneFrame } from "./DeviceFrame";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
+// One brand-mono stage for every card, matching the /work page. Card outer
+// backgrounds stay tonal (soft blue / cream / emerald) for editorial contrast
+// with the ink stage that hosts the device.
 const ACCENTS: Record<
   WorkItem["accent"],
-  { card: string; stage: string; label: string; tagSep: string }
+  { card: string; label: string; tagSep: string }
 > = {
-  ink:     { card: "bg-[var(--color-ink)] text-[var(--color-paper)]", stage: "bg-[#181A20]",                 label: "text-white/60",             tagSep: "text-white/30" },
-  paper:   { card: "bg-white text-[var(--color-ink)]",                stage: "bg-[var(--color-line)]",       label: "text-[var(--color-muted)]", tagSep: "text-[var(--color-line)]" },
-  blue:    { card: "bg-[#EEF3FF] text-[var(--color-ink)]",            stage: "bg-[linear-gradient(160deg,#0E1B3A_0%,#1E3AA8_100%)]", label: "text-[#3A4B8E]", tagSep: "text-[#3A4B8E]/30" },
-  warm:    { card: "bg-[#F7F3EB] text-[var(--color-ink)]",            stage: "bg-[linear-gradient(160deg,#3A2F1E_0%,#8A6A32_100%)]", label: "text-[#8A7350]", tagSep: "text-[#8A7350]/30" },
-  emerald: { card: "bg-[#EDF7EE] text-[var(--color-ink)]",            stage: "bg-[linear-gradient(160deg,#062E22_0%,#0F5D45_100%)]", label: "text-[#3F7B48]", tagSep: "text-[#3F7B48]/30" },
+  ink:     { card: "bg-[var(--color-ink)] text-[var(--color-paper)]", label: "text-white/60",             tagSep: "text-white/30" },
+  paper:   { card: "bg-white text-[var(--color-ink)]",                label: "text-[var(--color-muted)]", tagSep: "text-[var(--color-line)]" },
+  blue:    { card: "bg-[#EEF3FF] text-[var(--color-ink)]",            label: "text-[#3A4B8E]",            tagSep: "text-[#3A4B8E]/30" },
+  warm:    { card: "bg-[#F7F3EB] text-[var(--color-ink)]",            label: "text-[#8A7350]",            tagSep: "text-[#8A7350]/30" },
+  emerald: { card: "bg-[#EDF7EE] text-[var(--color-ink)]",            label: "text-[#3F7B48]",            tagSep: "text-[#3F7B48]/30" },
+};
+
+// Shared ink stage — same brand as the /work page.
+const STAGE_STYLE: React.CSSProperties = {
+  background:
+    "radial-gradient(600px 400px at 50% 20%, #1E2028 0%, #0F1116 55%, #08080B 100%)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
 };
 
 export default function WorkPreview() {
@@ -53,10 +63,17 @@ export default function WorkPreview() {
                   href={`/work/#${item.slug}`}
                   className={`group h-full rounded-2xl ${a.card} overflow-hidden flex flex-col transition-transform hover:-translate-y-0.5`}
                 >
-                  {/* Stage — a dark tinted surface with the device floating on it */}
+                  {/* Ink stage — device floats on top */}
                   <div
-                    className={`relative w-full ${a.stage} overflow-hidden grid place-items-center`}
-                    style={{ aspectRatio: "4 / 3", padding: "6% 10%" }}
+                    className="relative w-full overflow-hidden grid place-items-center"
+                    style={{
+                      ...STAGE_STYLE,
+                      aspectRatio: "4 / 3",
+                      padding:
+                        item.deviceKind === "mobile"
+                          ? "6% 12%"
+                          : "10% 8% 8%",
+                    }}
                   >
                     {hero ? (
                       item.deviceKind === "mobile" ? (

@@ -13,15 +13,14 @@ export const metadata: Metadata = {
     "Selected projects with founders and modern teams — memory products, property portals, and ecommerce growth engines.",
 };
 
-const ACCENT: Record<
-  WorkItem["accent"],
-  { stage: string; label: string; ring: string }
-> = {
-  ink:     { stage: "bg-[radial-gradient(1200px_800px_at_50%_10%,#1F2128_0%,#0A0A0A_65%)]",                                label: "text-white/60",                    ring: "border-white/10"        },
-  paper:   { stage: "bg-[radial-gradient(1200px_800px_at_50%_10%,#F3F3EE_0%,#E5E5E5_100%)]",                                label: "text-[var(--color-muted)]",        ring: "border-[var(--color-line)]" },
-  blue:    { stage: "bg-[radial-gradient(1200px_800px_at_50%_10%,#22376E_0%,#0B1936_60%,#050B1E_100%)]",                    label: "text-[#94A9E3]",                   ring: "border-white/10"        },
-  warm:    { stage: "bg-[radial-gradient(1200px_800px_at_50%_10%,#5A4022_0%,#2A1B0B_60%,#150C05_100%)]",                    label: "text-[#E4C892]",                   ring: "border-white/10"        },
-  emerald: { stage: "bg-[radial-gradient(1200px_800px_at_50%_10%,#0F5D45_0%,#062E22_60%,#03150F_100%)]",                    label: "text-[#8AD9B3]",                   ring: "border-white/10"        },
+// A single, brand-consistent stage used for every project. Deep ink with a
+// soft vignette from the top so the device catches the light. No project-
+// specific colour tinting — the work itself provides the colour.
+const STAGE_STYLE: React.CSSProperties = {
+  background:
+    "radial-gradient(1400px 900px at 50% 10%, #1E2028 0%, #0F1116 45%, #08080B 85%)",
+  border: "1px solid rgba(255,255,255,0.06)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
 };
 
 export default function WorkPage() {
@@ -34,8 +33,8 @@ export default function WorkPage() {
         intro="A snapshot of what we've built lately. Every project is a partnership — we work alongside the founders and teams involved, not in isolation."
       />
 
-      <section className="bg-[var(--color-paper)] pt-12 pb-16 md:pt-16 md:pb-24 border-t border-[var(--color-line)]">
-        <div className="container-x flex flex-col gap-24 md:gap-32">
+      <section className="bg-[var(--color-paper)] pt-12 pb-20 md:pt-16 md:pb-28 border-t border-[var(--color-line)]">
+        <div className="container-x flex flex-col gap-28 md:gap-40">
           {work.map((item, i) => (
             <WorkRow key={item.slug} item={item} index={i} />
           ))}
@@ -74,7 +73,6 @@ export default function WorkPage() {
 // ── A single project row: text side + cinematic device composition ──
 
 function WorkRow({ item, index }: { item: WorkItem; index: number }) {
-  const a = ACCENT[item.accent] ?? ACCENT.paper;
   const flipped = index % 2 === 1;
   const number = String(index + 1).padStart(2, "0");
 
@@ -85,14 +83,17 @@ function WorkRow({ item, index }: { item: WorkItem; index: number }) {
           flipped ? "lg:[&>*:first-child]:order-2" : ""
         }`}
       >
-        {/* Stage — dark, cinematic. Devices composed on top. */}
-        <div className={`lg:col-span-7 rounded-3xl ${a.stage} overflow-hidden relative`}>
+        {/* Stage — brand-mono ink, cinematic. Devices composed on top. */}
+        <div
+          className="lg:col-span-7 rounded-3xl overflow-hidden relative"
+          style={STAGE_STYLE}
+        >
           <DeviceStage item={item} />
         </div>
 
         {/* Text column */}
         <div className="lg:col-span-5 flex flex-col gap-5">
-          <div className={`text-xs uppercase tracking-[0.22em] text-[var(--color-muted)]`}>
+          <div className="text-xs uppercase tracking-[0.22em] text-[var(--color-muted)]">
             {number} — {item.client}
           </div>
 
@@ -158,45 +159,60 @@ function MobileStage({ item }: { item: WorkItem }) {
   return (
     <div
       className="relative w-full grid place-items-center"
-      style={{ minHeight: 460, padding: "56px 24px" }}
+      style={{ minHeight: 520, padding: "72px 24px 56px" }}
     >
       {/* Back-left iPhone (rotated) */}
       {second ? (
         <div
           className="hidden md:block absolute z-0"
           style={{
-            left: "6%",
-            top: "8%",
-            transform: "rotate(-8deg) translateZ(0)",
-            opacity: 0.92,
-            width: "42%",
-            maxWidth: 240,
+            left: "4%",
+            top: "10%",
+            transform: "rotate(-9deg)",
+            opacity: 0.94,
+            width: "34%",
+            maxWidth: 220,
           }}
         >
-          <IPhoneFrame src={second} maxHeight="none" style={{ height: "auto", width: "100%", aspectRatio: "1170 / 2532" }} />
+          <IPhoneFrame
+            src={second}
+            maxHeight="none"
+            style={{ height: "auto", width: "100%" }}
+          />
         </div>
       ) : null}
 
-      {/* Back-right iPhone (rotated other way) */}
+      {/* Back-right iPhone */}
       {third ? (
         <div
           className="hidden md:block absolute z-0"
           style={{
-            right: "6%",
-            top: "12%",
-            transform: "rotate(7deg) translateZ(0)",
-            opacity: 0.92,
-            width: "42%",
-            maxWidth: 240,
+            right: "4%",
+            top: "14%",
+            transform: "rotate(8deg)",
+            opacity: 0.94,
+            width: "34%",
+            maxWidth: 220,
           }}
         >
-          <IPhoneFrame src={third} maxHeight="none" style={{ height: "auto", width: "100%", aspectRatio: "1170 / 2532" }} />
+          <IPhoneFrame
+            src={third}
+            maxHeight="none"
+            style={{ height: "auto", width: "100%" }}
+          />
         </div>
       ) : null}
 
-      {/* Primary iPhone (front, centre) */}
-      <div className="relative z-10" style={{ width: "60%", maxWidth: 320 }}>
-        <IPhoneFrame src={primary} maxHeight="none" style={{ height: "auto", width: "100%", aspectRatio: "1170 / 2532" }} />
+      {/* Primary iPhone (front, centre) — visually dominant */}
+      <div
+        className="relative z-10"
+        style={{ width: "58%", maxWidth: 340 }}
+      >
+        <IPhoneFrame
+          src={primary}
+          maxHeight="none"
+          style={{ height: "auto", width: "100%" }}
+        />
       </div>
     </div>
   );
@@ -207,27 +223,26 @@ function WebStage({ item }: { item: WorkItem }) {
   return (
     <div
       className="relative w-full"
-      style={{ minHeight: 460, padding: "44px 32px 56px" }}
+      style={{ padding: "56px 32px 64px" }}
     >
-      {/* Ghost second browser tucked behind, offset up-and-right */}
+      {/* Ghost second browser tucked up-and-right behind the primary */}
       {second ? (
         <div
-          className="hidden md:block absolute"
+          className="hidden md:block absolute pointer-events-none"
           style={{
-            top: "0%",
-            right: "6%",
-            width: "62%",
-            opacity: 0.55,
-            transform: "translateY(-6%)",
-            filter: "blur(0.4px)",
+            top: "0",
+            right: "-4%",
+            width: "58%",
+            opacity: 0.42,
+            transform: "translateY(-2%)",
           }}
         >
           <DesktopFrame src={second} siteUrl={item.siteUrl} />
         </div>
       ) : null}
 
-      {/* Primary browser (front) */}
-      <div className="relative" style={{ marginTop: "3%" }}>
+      {/* Primary browser — front, prominent */}
+      <div className="relative" style={{ marginTop: "6%" }}>
         <DesktopFrame src={primary} siteUrl={item.siteUrl} />
       </div>
     </div>
