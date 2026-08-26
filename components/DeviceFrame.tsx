@@ -3,17 +3,12 @@
 import React, { useEffect, useState } from "react";
 
 // ── iPhone barrel ──────────────────────────────────────────────────
-// A refined iPhone 15 Pro mockup: subtle titanium bezel (no gaudy gradient
-// stripe), matte outer body, thin dark inner ring around the screen glass,
-// dynamic-island pill floating up top.
-//
-// The status bar PUSHES the image down (flex column, not overlay), and
-// its background is sampled from the image's top row so it merges into
-// the app content seamlessly — no visible seam. Text/icon colour flips
-// automatically based on the sampled colour's luminance.
+// Refined iPhone 15 Pro mockup: matte-titanium body (no gaudy gradient),
+// thin dark inner ring, dynamic-island pill. The status bar reserves its
+// own row above the image (flex column, not overlay) and samples the
+// image's top-row colour so it merges seamlessly into the app content.
 
-const STATUS_BAR_PCT = 6.1;   // % of the screen height reserved for the fake status bar
-const IPHONE_ASPECT  = 1170 / 2532;
+const STATUS_BAR_PCT = 5.4;   // % of the screen height for the fake status bar
 
 export function IPhoneFrame({
   src,
@@ -31,7 +26,6 @@ export function IPhoneFrame({
   style?: React.CSSProperties;
 }) {
   const sampled = useTopColour(hideStatus ? null : src);
-
   const statusBg = sampled?.color ?? "#0A0A0A";
   const statusFg = sampled ? (sampled.luminance > 0.55 ? "#0A0A0A" : "#FFFFFF") : "#FFFFFF";
 
@@ -41,56 +35,51 @@ export function IPhoneFrame({
       style={{
         aspectRatio: `${1170} / ${2532}`,
         height: maxHeight,
-        // Editorial two-layer shadow — no drop-shadow filter (it clips borders)
         ...style,
       }}
     >
-      {/* Titanium outer body (matte dark) */}
+      {/* Titanium body — matte, slim, editorial */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           borderRadius: "13.4%",
-          padding: "1.3%",
-          background: "#2A2C31",
+          padding: "1.05%",
+          background: "#22242A",
           boxShadow: [
-            "inset 0 0 0 0.5px rgba(255,255,255,0.18)",   // titanium edge highlight
-            "inset 0 -12px 24px rgba(0,0,0,0.35)",         // subtle body shading
-            "0 20px 40px rgba(0,0,0,0.16)",                // near shadow
-            "0 40px 90px rgba(0,0,0,0.14)",                // far shadow
+            "inset 0 0 0 0.5px rgba(255,255,255,0.18)",
+            "inset 0 -8px 20px rgba(0,0,0,0.35)",
+            "0 24px 48px rgba(10,10,10,0.14)",
+            "0 60px 120px rgba(10,10,10,0.10)",
           ].join(", "),
         }}
       >
-        {/* Thin black ring — the sliver between titanium and glass */}
+        {/* Thin ink ring between titanium and glass */}
         <div
           style={{
             position: "relative",
             width: "100%",
             height: "100%",
-            borderRadius: "11.6%",
-            padding: "1.0%",
+            borderRadius: "12.2%",
+            padding: "0.7%",
             background: "#0A0A0A",
           }}
         >
-          {/* Screen glass — flex column so status bar pushes image down */}
+          {/* Screen — flex column so the status bar pushes the image down */}
           <div
             style={{
               position: "relative",
               width: "100%",
               height: "100%",
-              borderRadius: "10.6%",
+              borderRadius: "11.4%",
               overflow: "hidden",
-              background: statusBg, // fallback that fills any hairline gap
+              background: statusBg,
               display: "flex",
               flexDirection: "column",
             }}
           >
-            {/* Fake status bar — reserves its own row above the image */}
-            {hideStatus ? null : (
-              <StatusBarIOS bg={statusBg} fg={statusFg} />
-            )}
+            {hideStatus ? null : <StatusBarIOS bg={statusBg} fg={statusFg} />}
 
-            {/* Image fills the remaining space */}
             <div
               style={{
                 position: "relative",
@@ -115,15 +104,15 @@ export function IPhoneFrame({
               />
             </div>
 
-            {/* Dynamic island — floats over the status bar */}
+            {/* Dynamic island — sits inside the status bar area */}
             <div
               style={{
                 position: "absolute",
                 top: `${STATUS_BAR_PCT * 0.28}%`,
                 left: "50%",
                 transform: "translateX(-50%)",
-                width: "34%",
-                height: `${STATUS_BAR_PCT * 0.62}%`,
+                width: "32%",
+                height: `${STATUS_BAR_PCT * 0.6}%`,
                 minHeight: 14,
                 borderRadius: 9999,
                 background: "#000",
@@ -138,11 +127,7 @@ export function IPhoneFrame({
   );
 }
 
-// ── Client-side top-row colour sampler ────────────────────────────
-// Loads the image on the client, samples the top 4 pixel rows, computes
-// the mean RGB, and returns both the CSS colour string and a 0..1
-// perceptual luminance so callers can pick a legible foreground.
-
+// Client-side top-row colour sampler — returns average RGB + 0..1 luminance.
 function useTopColour(src: string | null): { color: string; luminance: number } | null {
   const [result, setResult] = useState<{ color: string; luminance: number } | null>(null);
 
@@ -175,9 +160,7 @@ function useTopColour(src: string | null): { color: string; luminance: number } 
         b = Math.round(b / n);
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         if (!cancelled) setResult({ color: `rgb(${r}, ${g}, ${b})`, luminance });
-      } catch {
-        // CORS or decode failure → leave as null so default kicks in
-      }
+      } catch {}
     };
     img.src = src;
     return () => {
@@ -188,10 +171,6 @@ function useTopColour(src: string | null): { color: string; luminance: number } 
 
   return result;
 }
-
-// ── Fake iOS status bar ────────────────────────────────────────────
-// Sits ABOVE the image (flex row above the image, not an overlay). Bg
-// matches the sampled image top so the seam disappears.
 
 function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
   return (
@@ -210,41 +189,36 @@ function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
           "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif",
         fontWeight: 600,
         letterSpacing: "-0.02em",
-        // The clock nudges up slightly to sit visually above the island.
-        paddingTop: "0.8%",
       }}
     >
-      <div style={{ fontSize: "clamp(9px, 2.2vh, 22px)", lineHeight: 1, minWidth: "22%" }}>
+      <div style={{ fontSize: "clamp(9px, 2.0vh, 20px)", lineHeight: 1, minWidth: "22%" }}>
         9:41
       </div>
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "clamp(3px, 0.8vh, 8px)",
+          gap: "clamp(3px, 0.7vh, 7px)",
           minWidth: "22%",
           justifyContent: "flex-end",
         }}
       >
-        {/* signal bars */}
         <svg viewBox="0 0 22 14" fill="currentColor" aria-hidden
-             style={{ height: "clamp(8px, 1.5vh, 16px)", width: "auto" }}>
+             style={{ height: "clamp(7px, 1.3vh, 14px)", width: "auto" }}>
           <rect x="0"  y="9" width="3" height="5"  rx="0.6" />
           <rect x="5"  y="6" width="3" height="8"  rx="0.6" />
           <rect x="10" y="3" width="3" height="11" rx="0.6" />
           <rect x="15" y="0" width="3" height="14" rx="0.6" />
         </svg>
-        {/* wifi */}
         <svg viewBox="0 0 18 14" fill="none" aria-hidden
-             style={{ height: "clamp(8px, 1.5vh, 16px)", width: "auto" }}>
+             style={{ height: "clamp(7px, 1.3vh, 14px)", width: "auto" }}>
           <path d="M1 5 A11 11 0 0 1 17 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           <path d="M4 8 A7 7 0 0 1 14 8"   stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           <path d="M7 11 A3 3 0 0 1 11 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           <circle cx="9" cy="13" r="1" fill="currentColor" />
         </svg>
-        {/* battery */}
         <svg viewBox="0 0 26 12" fill="none" aria-hidden
-             style={{ height: "clamp(7px, 1.3vh, 14px)", width: "auto" }}>
+             style={{ height: "clamp(6px, 1.1vh, 12px)", width: "auto" }}>
           <rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" strokeOpacity="0.5" fill="none" />
           <rect x="2"   y="2"   width="17" height="8"  rx="1.5" fill="currentColor" />
           <rect x="23"  y="4"   width="2"  height="4"  rx="0.6" fill="currentColor" fillOpacity="0.5" />
@@ -255,30 +229,29 @@ function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
 }
 
 // ── Desktop browser barrel ─────────────────────────────────────────
-// GOOD HUMANS-branded browser window: ink title bar, three unobtrusive
-// traffic-lights, a pill URL bar with lock + monospace URL, thin inner
-// hairline separating chrome from content, editorial soft shadow.
+// Minimal editorial browser: three unobtrusive traffic-lights, an empty
+// placeholder pill (no domain), thin hairline separating chrome from
+// content, editorial soft shadow. No visual noise — the site itself is
+// the star, not the URL bar.
 
 export function DesktopFrame({
   src,
   alt = "",
-  siteUrl,
   className = "",
   style = {},
 }: {
   src: string;
   alt?: string;
-  siteUrl?: string;
+  siteUrl?: string;         // deliberately accepted + ignored (kept for API compat)
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const url = siteUrl ?? "site";
   return (
     <div
       className={`relative w-full ${className}`}
       style={{
         boxShadow:
-          "0 30px 60px -10px rgba(0,0,0,0.35), 0 60px 120px -30px rgba(0,0,0,0.25)",
+          "0 24px 48px -10px rgba(10,10,10,0.16), 0 60px 120px -30px rgba(10,10,10,0.12)",
         borderRadius: 14,
         ...style,
       }}
@@ -289,10 +262,10 @@ export function DesktopFrame({
           borderRadius: 14,
           overflow: "hidden",
           background: "#0A0A0A",
-          border: "1px solid rgba(255,255,255,0.06)",
+          border: "1px solid rgba(0,0,0,0.08)",
         }}
       >
-        {/* Title bar */}
+        {/* Minimal title bar — traffic lights + empty placeholder pill */}
         <div
           style={{
             display: "flex",
@@ -303,37 +276,29 @@ export function DesktopFrame({
             borderBottom: "1px solid rgba(255,255,255,0.06)",
           }}
         >
+          {/* Traffic lights */}
           <div style={{ display: "flex", gap: 6, marginRight: 6 }}>
             <span style={dot("#FF5F57")} />
             <span style={dot("#FEBC2E")} />
             <span style={dot("#28C840")} />
           </div>
+
+          {/* Empty placeholder pill — visual balance, no domain text */}
           <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
             <div
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "5px 14px",
+                width: "42%",
+                minWidth: 80,
+                height: 22,
                 borderRadius: 999,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.04)",
-                color: "rgba(255,255,255,0.75)",
-                fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
-                fontSize: 11,
-                letterSpacing: "0.02em",
-                minWidth: "40%",
-                justifyContent: "center",
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.03)",
               }}
-            >
-              <svg width="10" height="12" viewBox="0 0 10 12" fill="none" aria-hidden>
-                <rect x="1" y="5" width="8" height="6" rx="1.5" stroke="currentColor" strokeOpacity="0.65" />
-                <path d="M3 5 V3.5 A2 2 0 0 1 7 3.5 V5" stroke="currentColor" strokeOpacity="0.65" fill="none" />
-              </svg>
-              <span>{url}</span>
-            </div>
+            />
           </div>
-          <div style={{ display: "flex", gap: 4, opacity: 0.28 }}>
+
+          {/* Right-side spacer dots to balance traffic lights */}
+          <div style={{ display: "flex", gap: 4, opacity: 0.28, marginLeft: 6 }}>
             <span style={dot("#FFFFFF", 3)} />
             <span style={dot("#FFFFFF", 3)} />
             <span style={dot("#FFFFFF", 3)} />
