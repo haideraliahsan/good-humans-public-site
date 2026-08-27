@@ -4,13 +4,12 @@ import React, { useEffect, useState } from "react";
 
 // ── iPhone barrel ──────────────────────────────────────────────────
 //
-// Real-rounded corners use asymmetric border-radius `X% / Y%` so the
-// pixel radius is equal on both axes despite the tall 1170 : 2532 aspect.
-//
-// Thick pure-ink bezel (2.6% of frame width on every side) with a very
-// fine highlight on the top edge to hint at the glass meeting the body.
-// The status bar reserves its own row above the screen (flex column) and
-// samples the image's top colour so it seams cleanly into the app.
+// Both the corner radii and the fake iOS status bar are sized off the
+// FRAME (not the viewport). We enable CSS container queries on the outer
+// wrapper (`containerType: "inline-size"`) so `cqi` units resolve to a
+// % of the frame's own width — that way status-bar text, icons and chrome
+// scale with the phone, not with the browser window. This was the mobile-
+// view bug where a small phone shipped huge status text.
 
 const STATUS_BAR_PCT = 5.4;
 const IPHONE_ASPECT_WH = 1170 / 2532; // ≈ 0.462
@@ -42,6 +41,8 @@ export function IPhoneFrame({
       style={{
         aspectRatio: `${1170} / ${2532}`,
         height: maxHeight,
+        // Enable cqi units inside — % of THIS frame's width.
+        containerType: "inline-size",
         ...style,
       }}
     >
@@ -54,7 +55,7 @@ export function IPhoneFrame({
           padding: "2.6%",
           background: "#0A0A0A",
           boxShadow: [
-            "inset 0 0 0 0.5px rgba(255,255,255,0.08)",   // fine top-edge highlight
+            "inset 0 0 0 0.5px rgba(255,255,255,0.08)",
             "0 24px 48px rgba(10,10,10,0.16)",
             "0 60px 120px rgba(10,10,10,0.12)",
           ].join(", "),
@@ -108,7 +109,7 @@ export function IPhoneFrame({
               transform: "translateX(-50%)",
               width: "30%",
               height: `${STATUS_BAR_PCT * 0.58}%`,
-              minHeight: 12,
+              minHeight: 10,
               borderRadius: 9999,
               background: "#000",
               pointerEvents: "none",
@@ -166,6 +167,8 @@ function useTopColour(src: string | null): { color: string; luminance: number } 
   return result;
 }
 
+// All values in `cqi` = % of the OUTER FRAME width. So a 120 px phone gets
+// proportionally small chrome, a 320 px phone gets larger.
 function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
   return (
     <div
@@ -185,21 +188,27 @@ function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
         letterSpacing: "-0.02em",
       }}
     >
-      <div style={{ fontSize: "clamp(7px, 1.4vh, 13px)", lineHeight: 1, minWidth: "22%" }}>
+      <div
+        style={{
+          fontSize: "4.6cqi",   // ~11 px on a 240 px phone, ~5.5 px on a 120 px phone
+          lineHeight: 1,
+          minWidth: "22%",
+        }}
+      >
         9:41
       </div>
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "clamp(3px, 0.7vh, 6px)",
+          gap: "1.6cqi",
           minWidth: "22%",
           justifyContent: "flex-end",
         }}
       >
         {/* wifi */}
         <svg viewBox="0 0 18 14" fill="none" aria-hidden
-             style={{ height: "clamp(6px, 1.1vh, 11px)", width: "auto" }}>
+             style={{ height: "3.8cqi", width: "auto" }}>
           <path d="M1 5 A11 11 0 0 1 17 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           <path d="M4 8 A7 7 0 0 1 14 8"   stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           <path d="M7 11 A3 3 0 0 1 11 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -207,7 +216,7 @@ function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
         </svg>
         {/* battery */}
         <svg viewBox="0 0 26 12" fill="none" aria-hidden
-             style={{ height: "clamp(5px, 0.9vh, 9px)", width: "auto" }}>
+             style={{ height: "3.2cqi", width: "auto" }}>
           <rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" strokeOpacity="0.5" fill="none" />
           <rect x="2"   y="2"   width="17" height="8"  rx="1.5" fill="currentColor" />
           <rect x="23"  y="4"   width="2"  height="4"  rx="0.6" fill="currentColor" fillOpacity="0.5" />
@@ -219,10 +228,10 @@ function StatusBarIOS({ bg, fg }: { bg: string; fg: string }) {
 
 // ── Desktop browser barrel ─────────────────────────────────────────
 //
-// Wrapped in a thick pure-ink outer bezel (7 px) so it reads as a real
-// mounted display rather than a flat rectangle. Inside: slim title bar
-// with three traffic-lights + empty URL pill (no domain), then the
-// screenshot flush below.
+// Chrome is sized in `cqi` units — % of the FRAME'S OWN width. So on a
+// mobile viewport where the browser mockup renders at ~350 px wide, the
+// title bar / traffic lights / URL pill shrink proportionally instead of
+// staying at their fixed pixel size and looking oversized.
 
 export function DesktopFrame({
   src,
@@ -240,10 +249,10 @@ export function DesktopFrame({
     <div
       className={`relative w-full ${className}`}
       style={{
-        // Thick black outer bezel — the "monitor frame"
-        padding: 7,
+        containerType: "inline-size",   // enable cqi inside
+        padding: "0.9cqi",              // thick ink bezel, scales with frame
         background: "#0A0A0A",
-        borderRadius: 16,
+        borderRadius: "2.2cqi",
         boxShadow: [
           "inset 0 0 0 0.5px rgba(255,255,255,0.06)",
           "0 24px 48px -10px rgba(10,10,10,0.18)",
@@ -252,11 +261,10 @@ export function DesktopFrame({
         ...style,
       }}
     >
-      {/* Inner container — chrome + screenshot */}
       <div
         style={{
           width: "100%",
-          borderRadius: 10,
+          borderRadius: "1.4cqi",
           overflow: "hidden",
           background: "#0A0A0A",
         }}
@@ -265,24 +273,25 @@ export function DesktopFrame({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 8,
-            padding: "7px 10px",
+            gap: "1.1cqi",
+            padding: "0.9cqi 1.4cqi",
             background: "linear-gradient(180deg, #1B1D22 0%, #101216 100%)",
             borderBottom: "1px solid rgba(255,255,255,0.06)",
           }}
         >
-          <div style={{ display: "flex", gap: 5 }}>
-            <span style={dot("#FF5F57", 10)} />
-            <span style={dot("#FEBC2E", 10)} />
-            <span style={dot("#28C840", 10)} />
+          <div style={{ display: "flex", gap: "0.7cqi" }}>
+            <span style={dot("#FF5F57")} />
+            <span style={dot("#FEBC2E")} />
+            <span style={dot("#28C840")} />
           </div>
 
           <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
             <div
               style={{
                 width: "38%",
-                minWidth: 60,
-                height: 12,
+                minWidth: "6cqi",
+                height: "1.6cqi",
+                minHeight: 8,
                 borderRadius: 999,
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.04)",
@@ -290,10 +299,10 @@ export function DesktopFrame({
             />
           </div>
 
-          <div style={{ display: "flex", gap: 3, opacity: 0.28 }}>
-            <span style={dot("#FFFFFF", 2.5)} />
-            <span style={dot("#FFFFFF", 2.5)} />
-            <span style={dot("#FFFFFF", 2.5)} />
+          <div style={{ display: "flex", gap: "0.4cqi", opacity: 0.28 }}>
+            <span style={smallDot()} />
+            <span style={smallDot()} />
+            <span style={smallDot()} />
           </div>
         </div>
 
@@ -311,12 +320,28 @@ export function DesktopFrame({
   );
 }
 
-function dot(color: string, size = 10): React.CSSProperties {
+// Traffic-light dot — sized in cqi so it scales with the desktop width.
+function dot(color: string): React.CSSProperties {
   return {
     display: "inline-block",
-    width: size,
-    height: size,
+    width: "1.4cqi",
+    height: "1.4cqi",
+    minWidth: 6,
+    minHeight: 6,
     borderRadius: "50%",
     background: color,
+  };
+}
+
+// Tiny balance dot for the right side of the chrome.
+function smallDot(): React.CSSProperties {
+  return {
+    display: "inline-block",
+    width: "0.4cqi",
+    height: "0.4cqi",
+    minWidth: 2,
+    minHeight: 2,
+    borderRadius: "50%",
+    background: "#FFFFFF",
   };
 }

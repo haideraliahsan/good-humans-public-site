@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
@@ -173,37 +173,63 @@ const PHONE_SLOTS: PhoneSlot[] = [
 
 function MobileStage({ item }: { item: WorkItem }) {
   const slots = PHONE_SLOTS.length;
-  const phase = useCycle(slots, 3800);
+  const phase = useCycle(item.images.length, 3800);
   const phones = item.images.slice(0, slots);
 
   return (
-    <div className="relative w-full" style={{ aspectRatio: "3 / 2" }}>
-      {phones.map((src, phoneIdx) => {
-        const slot = PHONE_SLOTS[(phoneIdx + phase) % slots];
-        return (
-          <motion.div
-            key={phoneIdx}
-            className="absolute origin-top"
-            style={{ width: "32%", maxWidth: 230 }}
-            initial={false}
-            animate={{
-              left: slot.left,
-              top: slot.top,
-              rotate: slot.rotate,
-              scale: slot.scale,
-              zIndex: slot.zIndex,
-            }}
-            transition={{ duration: 0.9, ease }}
-          >
-            <IPhoneFrame
-              src={src}
-              maxHeight="none"
-              style={{ height: "auto", width: "100%" }}
-            />
-          </motion.div>
-        );
-      })}
-    </div>
+    <>
+      {/* ─ Small screens ─ single hero phone with a smooth cross-fade
+           between all available screenshots. No fan (would clip / overlap
+           text at narrow widths). */}
+      <div className="lg:hidden flex justify-center py-2">
+        <div style={{ width: "68%", maxWidth: 300 }}>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={item.images[phase]}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.55, ease }}
+            >
+              <IPhoneFrame
+                src={item.images[phase]}
+                maxHeight="none"
+                style={{ height: "auto", width: "100%" }}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* ─ Large screens ─ 3-phone fan with barrels rotating through slots ─ */}
+      <div className="hidden lg:block relative w-full" style={{ aspectRatio: "3 / 2" }}>
+        {phones.map((src, phoneIdx) => {
+          const slot = PHONE_SLOTS[(phoneIdx + phase % slots) % slots];
+          return (
+            <motion.div
+              key={phoneIdx}
+              className="absolute origin-top"
+              style={{ width: "32%", maxWidth: 230 }}
+              initial={false}
+              animate={{
+                left: slot.left,
+                top: slot.top,
+                rotate: slot.rotate,
+                scale: slot.scale,
+                zIndex: slot.zIndex,
+              }}
+              transition={{ duration: 0.9, ease }}
+            >
+              <IPhoneFrame
+                src={src}
+                maxHeight="none"
+                style={{ height: "auto", width: "100%" }}
+              />
+            </motion.div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
@@ -227,38 +253,50 @@ const DESKTOP_SLOTS: DesktopSlot[] = [
 
 function WebStage({ item }: { item: WorkItem }) {
   const slots = DESKTOP_SLOTS.length;
-  const phase = useCycle(slots, 4200);
+  const phase = useCycle(item.images.length, 4200);
   const desktops = item.images.slice(0, slots);
 
   return (
-    // Container aspect accommodates the fan: back desktops sit at top,
-    // front sits ~12% lower with a slight left shift. Extra height keeps
-    // everything inside the row and clear of the text column.
-    <div
-      className="relative w-full"
-      style={{ aspectRatio: "1920 / 1240" }}
-    >
-      {desktops.map((src, deskIdx) => {
-        const slot = DESKTOP_SLOTS[(deskIdx + phase) % slots];
-        return (
+    <>
+      {/* ─ Small screens ─ single hero browser, cycles through screens ─ */}
+      <div className="lg:hidden py-2">
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={deskIdx}
-            className="absolute origin-top"
-            style={{ width: "88%" }}
-            initial={false}
-            animate={{
-              top: slot.top,
-              left: slot.left,
-              rotate: slot.rotate,
-              scale: slot.scale,
-              zIndex: slot.zIndex,
-            }}
-            transition={{ duration: 0.9, ease }}
+            key={item.images[phase]}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.55, ease }}
           >
-            <DesktopFrame src={src} alt={deskIdx === 0 ? item.client : ""} />
+            <DesktopFrame src={item.images[phase]} alt={item.client} />
           </motion.div>
-        );
-      })}
-    </div>
+        </AnimatePresence>
+      </div>
+
+      {/* ─ Large screens ─ 3-desktop fan with barrels rotating through slots ─ */}
+      <div className="hidden lg:block relative w-full" style={{ aspectRatio: "1920 / 1240" }}>
+        {desktops.map((src, deskIdx) => {
+          const slot = DESKTOP_SLOTS[(deskIdx + phase % slots) % slots];
+          return (
+            <motion.div
+              key={deskIdx}
+              className="absolute origin-top"
+              style={{ width: "88%" }}
+              initial={false}
+              animate={{
+                top: slot.top,
+                left: slot.left,
+                rotate: slot.rotate,
+                scale: slot.scale,
+                zIndex: slot.zIndex,
+              }}
+              transition={{ duration: 0.9, ease }}
+            >
+              <DesktopFrame src={src} alt={deskIdx === 0 ? item.client : ""} />
+            </motion.div>
+          );
+        })}
+      </div>
+    </>
   );
 }
