@@ -129,19 +129,21 @@ function WorkRow({ item, index }: { item: WorkItem; index: number }) {
   );
 }
 
-// Shared clock: bumps `phase` mod `slots` every `intervalMs`. Each barrel's
-// current slot is `(barrelIndex + phase) % slots`, so barrels ROTATE through
-// fixed positional slots without ever changing their image.
-function useCycle(slots: number, intervalMs: number) {
+// Shared clock: bumps `phase` mod `mod` every `intervalMs`. Each barrel's
+// current position is `(barrelIndex + posPhase) % slots`, and each barrel's
+// current image is `images[(barrelIndex + contentPhase) % totalImages]`.
+// Two independent clocks let positions rotate fast while content evolves
+// slowly, so all images get airtime without the reel feeling like a strobe.
+function useCycle(mod: number, intervalMs: number) {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
-    if (slots <= 1) return;
+    if (mod <= 1) return;
     const id = window.setInterval(
-      () => setPhase((p) => (p + 1) % slots),
+      () => setPhase((p) => (p + 1) % mod),
       intervalMs,
     );
     return () => window.clearInterval(id);
-  }, [slots, intervalMs]);
+  }, [mod, intervalMs]);
   return phase;
 }
 
@@ -173,26 +175,33 @@ const PHONE_SLOTS: PhoneSlot[] = [
 
 function MobileStage({ item }: { item: WorkItem }) {
   const slots = PHONE_SLOTS.length;
-  const phase = useCycle(item.images.length, 3800);
+  const total = item.images.length;
+
+  // Fast physical rotation on the desktop fan — barrels swap slots, image
+  // NEVER changes per barrel. Mobile hero still cycles through all images
+  // (a single element carousel — no barrels involved, so no "refresh feel").
+  const posPhase  = useCycle(slots, 3800);
+  const heroPhase = useCycle(total, 4500);
+
+  // First `slots` images fill the three fan barrels — one image per barrel,
+  // stable for the lifetime of the page.
   const phones = item.images.slice(0, slots);
 
   return (
     <>
-      {/* ─ Small screens ─ single hero phone with a smooth cross-fade
-           between all available screenshots. No fan (would clip / overlap
-           text at narrow widths). */}
+      {/* ─ Small screens ─ single hero phone; cycles through all screens ─ */}
       <div className="lg:hidden flex justify-center py-2">
         <div style={{ width: "68%", maxWidth: 300 }}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              key={item.images[phase]}
+              key={item.images[heroPhase]}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.55, ease }}
             >
               <IPhoneFrame
-                src={item.images[phase]}
+                src={item.images[heroPhase]}
                 maxHeight="none"
                 style={{ height: "auto", width: "100%" }}
               />
@@ -201,10 +210,11 @@ function MobileStage({ item }: { item: WorkItem }) {
         </div>
       </div>
 
-      {/* ─ Large screens ─ 3-phone fan with barrels rotating through slots ─ */}
+      {/* ─ Large screens ─ 3-phone fan; ONLY positions animate, images
+             stay locked to their barrel. No content refresh, ever. ─ */}
       <div className="hidden lg:block relative w-full" style={{ aspectRatio: "3 / 2" }}>
         {phones.map((src, phoneIdx) => {
-          const slot = PHONE_SLOTS[(phoneIdx + phase % slots) % slots];
+          const slot = PHONE_SLOTS[(phoneIdx + posPhase) % slots];
           return (
             <motion.div
               key={phoneIdx}
@@ -253,30 +263,38 @@ const DESKTOP_SLOTS: DesktopSlot[] = [
 
 function WebStage({ item }: { item: WorkItem }) {
   const slots = DESKTOP_SLOTS.length;
-  const phase = useCycle(item.images.length, 4200);
+  const total = item.images.length;
+
+  // Positions rotate on their own clock; images NEVER swap on the desktop
+  // fan — each of the three barrels keeps its own screenshot for the
+  // lifetime of the page. Only mobile hero cycles all images.
+  const posPhase  = useCycle(slots, 4200);
+  const heroPhase = useCycle(total, 5000);
+
   const desktops = item.images.slice(0, slots);
 
   return (
     <>
-      {/* ─ Small screens ─ single hero browser, cycles through screens ─ */}
+      {/* ─ Small screens ─ single hero browser, cycles every screen ─ */}
       <div className="lg:hidden py-2">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={item.images[phase]}
+            key={item.images[heroPhase]}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.55, ease }}
           >
-            <DesktopFrame src={item.images[phase]} alt={item.client} />
+            <DesktopFrame src={item.images[heroPhase]} alt={item.client} />
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* ─ Large screens ─ 3-desktop fan with barrels rotating through slots ─ */}
+      {/* ─ Large screens ─ 3-desktop fan; ONLY positions animate. Each
+             barrel holds its own screenshot permanently. ─ */}
       <div className="hidden lg:block relative w-full" style={{ aspectRatio: "1920 / 1240" }}>
         {desktops.map((src, deskIdx) => {
-          const slot = DESKTOP_SLOTS[(deskIdx + phase % slots) % slots];
+          const slot = DESKTOP_SLOTS[(deskIdx + posPhase) % slots];
           return (
             <motion.div
               key={deskIdx}
