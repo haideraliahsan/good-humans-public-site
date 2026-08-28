@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const methods = [
-  { label: "Email", value: "me@davebrown.co.uk", href: "mailto:me@davebrown.co.uk" },
+  { label: "Email", value: "dave@good-humans.co.uk", href: "mailto:dave@good-humans.co.uk" },
   { label: "LinkedIn", value: "/in/goodhumans", href: "#" },
   { label: "Google Meet", value: "Schedule a video call", href: "#" },
 ];

@@ -353,7 +353,7 @@ export const BLOCKS: Block[] = [
     label: "Email chip",
     group: "Contact",
     caps: { light: true },
-    fields: [{ key: "email", label: "Email", default: "me@davebrown.co.uk" }],
+    fields: [{ key: "email", label: "Email", default: "dave@good-humans.co.uk" }],
     render: (el, ctx) => {
       const dark = el.light || ctx.themeIsDark;
       return (
