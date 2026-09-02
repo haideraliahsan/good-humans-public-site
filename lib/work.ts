@@ -39,6 +39,7 @@ export const work: WorkItem[] = [
       "A digital memory companion that helps people document daily life, preserve memories, connect with family, manage care needs, and create a lasting legacy.",
     tags: ["Web", "App", "Design"],
     accent: "emerald",
+    href: "https://dontforgetme.co/",
     deviceKind: "mobile",
     images: [
       "/work/dont-forget-me/screen-01.jpg",

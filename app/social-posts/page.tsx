@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import VideoAuthGate from "@/components/video/VideoAuthGate";
+import PasswordGate from "@/components/PasswordGate";
 import Studio from "@/components/social/StudioLoader";
 
 export const metadata: Metadata = {
@@ -13,10 +13,9 @@ export const metadata: Metadata = {
 };
 
 export default function SocialPostsPage() {
-  // Reuses the same password gate as /video-generation.
   return (
-    <VideoAuthGate>
+    <PasswordGate>
       <Studio />
-    </VideoAuthGate>
+    </PasswordGate>
   );
 }

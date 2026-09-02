@@ -2,9 +2,13 @@
 
 import { useEffect, useState, type PropsWithChildren } from "react";
 
-const STORAGE_KEY = "gh_video_gate";
+// Shared client-side password gate for internal tools on the marketing site.
+// Currently used by /social-posts (Social Post Studio). The env var name is
+// kept as NEXT_PUBLIC_VIDEO_GEN_PASSWORD for backwards compatibility with
+// any existing Netlify config — feel free to rename later.
+const STORAGE_KEY = "gh_internal_gate";
 
-export default function VideoAuthGate({ children }: PropsWithChildren) {
+export default function PasswordGate({ children }: PropsWithChildren) {
   const [hydrated, setHydrated] = useState(false);
   const [ok, setOk] = useState(false);
   const [input, setInput] = useState("");
@@ -52,13 +56,13 @@ export default function VideoAuthGate({ children }: PropsWithChildren) {
           className="w-full max-w-md flex flex-col gap-6"
         >
           <div className="text-xs uppercase tracking-[0.22em] text-[var(--color-muted)]">
-            (✦) — Video Studio
+            (✦) — Internal
           </div>
           <h1 className="display-text text-5xl md:text-6xl tracking-tight">
             Internal tool.
           </h1>
           <p className="text-[var(--color-muted)]">
-            Enter the studio password to continue.
+            Enter the password to continue.
           </p>
           <input
             type="password"

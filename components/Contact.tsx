@@ -18,7 +18,7 @@ export default function Contact() {
     >
       <div className="container-x">
         <div className="text-xs uppercase tracking-[0.22em] text-white/50 mb-8">
-          (05) — Contact
+          (06) — Contact
         </div>
 
         <motion.h2

@@ -5,6 +5,7 @@ import WorkPreview from "@/components/WorkPreview";
 import About from "@/components/About";
 import Services from "@/components/Services";
 import HowWeWork from "@/components/HowWeWork";
+import Prototypes from "@/components/Prototypes";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 
@@ -18,6 +19,7 @@ export default function Page() {
       <About />
       <Services />
       <HowWeWork />
+      <Prototypes />
       <Contact />
       <Footer />
     </main>

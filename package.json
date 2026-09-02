@@ -10,15 +10,11 @@
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
-    "@remotion/media": "^4.0.484",
-    "@remotion/player": "^4.0.484",
-    "@remotion/web-renderer": "^4.0.484",
     "framer-motion": "^11.18.2",
     "html-to-image": "^1.11.13",
     "next": "^15.1.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "remotion": "^4.0.484"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
