@@ -121,6 +121,29 @@ export const services: Service[] = [
     ],
     tools: ["GA4", "Mixpanel", "n8n", "Zapier", "HubSpot", "Customer.io"],
   },
+  {
+    slug: "shopify",
+    n: "06",
+    title: "Shopify",
+    tagline: "Online stores that sell, not just look pretty.",
+    copy: "Shopify stores designed, built, configured and grown - from a fresh launch through migration to conversion work on an existing shop.",
+    description:
+      "Shopify done properly. Brand-aligned themes, smart product architecture, checkout tuned for conversion, and the third-party apps that actually earn their keep. Launching a new store, migrating from Etsy / WooCommerce / Wix / Squarespace, or squeezing more from a shop that already exists - we bring the design taste and technical depth to make it feel like a premium brand and read like one to shoppers.",
+    deliverables: [
+      "New store design, build & launch",
+      "Custom theme development (Liquid, sections, blocks)",
+      "Migrations from Etsy, WooCommerce, Wix & custom",
+      "App integrations, Metafields, Shopify Flow",
+      "Product artwork & store asset generation",
+    ],
+    outcomes: [
+      "Premium brand presence on Shopify",
+      "Higher conversion at checkout",
+      "Cleaner catalog & faster ops for the team",
+      "A store that scales without a rebuild",
+    ],
+    tools: ["Shopify", "Liquid", "Hydrogen", "Klaviyo", "Judge.me", "Figma"],
+  },
 ];
 
 export const findService = (slug: string) =>
