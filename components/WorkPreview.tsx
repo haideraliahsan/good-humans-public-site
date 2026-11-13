@@ -35,8 +35,8 @@ export default function WorkPreview() {
             </h2>
           </div>
           <p className="text-base md:text-lg text-[var(--color-muted)] max-w-[42ch]">
-            A snapshot of recent work with founders and modern teams — memory
-            products, property portals, and ecommerce growth engines.
+            A snapshot of recent work with founders and modern teams — wedding
+            platforms, awards websites, social apps and ecommerce growth engines.
           </p>
         </div>
 

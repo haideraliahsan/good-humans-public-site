@@ -29,6 +29,80 @@ export type WorkItem = {
 
 export const work: WorkItem[] = [
   {
+    slug: "wed",
+    client: "Wed",
+    tagline: "Discover. Plan. Celebrate.",
+    title: "An all-in-one platform for couples to discover, plan and book their wedding.",
+    summary:
+      "Couples find inspiration in real weddings, build a supplier team and book it all in one place.",
+    description:
+      "Wed is the all-in-one wedding planning platform we designed and built from the ground up, covering the brand, the couples app, the supplier portal and admin. Engaged couples discover real weddings shared by other couples, build a wedding team of verified suppliers, check availability against their date and book everything in one place. Suppliers manage bookings, availability and messages from their own portal, and married couples earn credit when a supplier they tag is booked.",
+    tags: ["Web", "Brand", "Design"],
+    accent: "warm",
+    href: "https://gettingwed.app/",
+    deviceKind: "web",
+    siteUrl: "gettingwed.app",
+    images: [
+      "/work/wed/screen-01.jpg",
+      "/work/wed/screen-02.jpg",
+      "/work/wed/screen-03.jpg",
+      "/work/wed/screen-04.jpg",
+      "/work/wed/screen-05.jpg",
+      "/work/wed/screen-06.jpg",
+      "/work/wed/screen-07.jpg",
+      "/work/wed/screen-08.jpg",
+      "/work/wed/screen-09.jpg",
+      "/work/wed/screen-10.jpg",
+    ],
+  },
+  {
+    slug: "womens-football-awards",
+    client: "Women's Football Awards",
+    tagline: "The home of women's football recognition.",
+    title: "A new website for Europe's biggest awards event in women's football.",
+    summary:
+      "Designed and built the new Women's Football Awards site, from hero video to winners archive.",
+    description:
+      "We designed and built the new Women's Football Awards website ahead of the 2027 ceremony, the event's fifth anniversary. The site brings together the hosts and a live countdown, every award category, a full winners archive from the first ceremony in 2023, the judges, partners and a press archive, with ticket, nomination and partnership enquiries routed straight to the awards team.",
+    tags: ["Web", "Design"],
+    accent: "blue",
+    href: "https://womensfootballawards.com/",
+    deviceKind: "web",
+    siteUrl: "womensfootballawards.com",
+    images: [
+      "/work/womens-football-awards/screen-01.jpg",
+      "/work/womens-football-awards/screen-02.jpg",
+      "/work/womens-football-awards/screen-03.jpg",
+      "/work/womens-football-awards/screen-04.jpg",
+      "/work/womens-football-awards/screen-05.jpg",
+      "/work/womens-football-awards/screen-06.jpg",
+      "/work/womens-football-awards/screen-07.jpg",
+      "/work/womens-football-awards/screen-08.jpg",
+      "/work/womens-football-awards/screen-09.jpg",
+      "/work/womens-football-awards/screen-10.jpg",
+    ],
+  },
+  {
+    slug: "blast-social",
+    client: "Blast Social",
+    tagline: "Events that match your lifestyle.",
+    title: "A mobile app for discovering and booking social events in London.",
+    summary:
+      "Members pick their interests, get matched to events and hold a space in seconds.",
+    description:
+      "Blast Social is a mobile app for small-group social events, starting in London. Members register for free and choose their interests, the app matches them to padel socials, supper clubs and more as events open, and a space is held with instant card payment, with waiting lists once an event sells out. We built the brand, the mobile app and the host and admin platforms behind it, including bookings with live capacity, matching, reviews and notifications.",
+    tags: ["App", "Brand", "Design"],
+    accent: "emerald",
+    deviceKind: "mobile",
+    images: [
+      "/work/blast-social/screen-01.jpg",
+      "/work/blast-social/screen-02.jpg",
+      "/work/blast-social/screen-03.jpg",
+      "/work/blast-social/screen-04.jpg",
+      "/work/blast-social/screen-05.jpg",
+    ],
+  },
+  {
     slug: "dont-forget-me",
     client: "Don't Forget Me",
     tagline: "Your life story, preserved forever.",

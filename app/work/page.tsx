@@ -4,7 +4,7 @@ import WorkPageClient from "./WorkPageClient";
 export const metadata: Metadata = {
   title: "Work — GOOD HUMANS",
   description:
-    "Selected projects with founders and modern teams — memory products, property portals, and ecommerce growth engines.",
+    "Selected projects with founders and modern teams — wedding platforms, awards websites, social apps, memory products, property portals and ecommerce growth engines.",
 };
 
 export default function WorkPage() {
