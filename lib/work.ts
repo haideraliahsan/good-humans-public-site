@@ -68,7 +68,7 @@ export const work: WorkItem[] = [
     summary:
       "Designed and built the new Women's Football Awards site, from hero video to winners archive.",
     description:
-      "We designed and built the new Women's Football Awards website ahead of the 2027 ceremony, the event's fifth anniversary. The site brings together the hosts and a live countdown, every award category, a full winners archive from the first ceremony in 2023, the judges, partners and a press archive, with ticket, nomination and partnership enquiries routed straight to the awards team.",
+      "We designed and built the new Women's Football Awards website ahead of the 2027 ceremony, the event's fifth anniversary. The site brings together the hosts and a live countdown, every award category, a full winners archive from the first ceremony in 2023, the judges, partners and a press archive, with ticket, nomination and partnership enquiries routed straight to the awards team. Good Humans is proud to be the digital partner of Football For Change.",
     tags: ["Web", "Design"],
     accent: "blue",
     href: "https://womensfootballawards.com/",
