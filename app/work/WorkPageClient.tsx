@@ -202,6 +202,7 @@ function MobileStage({ item }: { item: WorkItem }) {
             >
               <IPhoneFrame
                 src={item.images[heroPhase]}
+                theme={item.frame}
                 maxHeight="none"
                 style={{ height: "auto", width: "100%" }}
               />
@@ -232,6 +233,7 @@ function MobileStage({ item }: { item: WorkItem }) {
             >
               <IPhoneFrame
                 src={src}
+                theme={item.frame}
                 maxHeight="none"
                 style={{ height: "auto", width: "100%" }}
               />
@@ -285,7 +287,7 @@ function WebStage({ item }: { item: WorkItem }) {
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.55, ease }}
           >
-            <DesktopFrame src={item.images[heroPhase]} alt={item.client} />
+            <DesktopFrame src={item.images[heroPhase]} alt={item.client} siteUrl={item.siteUrl} theme={item.frame} />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -310,7 +312,7 @@ function WebStage({ item }: { item: WorkItem }) {
               }}
               transition={{ duration: 0.9, ease }}
             >
-              <DesktopFrame src={src} alt={deskIdx === 0 ? item.client : ""} />
+              <DesktopFrame src={src} alt={deskIdx === 0 ? item.client : ""} siteUrl={item.siteUrl} theme={item.frame} />
             </motion.div>
           );
         })}

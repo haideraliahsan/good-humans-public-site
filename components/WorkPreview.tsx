@@ -69,12 +69,13 @@ export default function WorkPreview() {
                         <IPhoneFrame
                           src={hero}
                           alt={item.client}
+                          theme={item.frame}
                           maxHeight="100%"
                           style={{ height: "100%" }}
                         />
                       ) : (
                         <div className="w-full">
-                          <DesktopFrame src={hero} alt={item.client} />
+                          <DesktopFrame src={hero} alt={item.client} siteUrl={item.siteUrl} theme={item.frame} />
                         </div>
                       )
                     ) : null}

@@ -21,6 +21,9 @@ export type WorkItem = {
   deviceKind: DeviceKind;
   // For desktop mockups, the URL shown in the fake address bar
   siteUrl?: string;
+  // Device material: silver (light) or black titanium (dark). Match it to
+  // the app's own palette. Defaults to light.
+  frame?: "light" | "dark";
 
   // Cropped, brand-safe screenshots. First entry is the hero. Path is
   // absolute under /public.
@@ -30,6 +33,7 @@ export type WorkItem = {
 export const work: WorkItem[] = [
   {
     slug: "wed",
+    frame: "light",
     client: "Wed",
     tagline: "Discover. Plan. Celebrate.",
     title: "An all-in-one platform for couples to discover, plan and book their wedding.",
@@ -57,6 +61,7 @@ export const work: WorkItem[] = [
   },
   {
     slug: "womens-football-awards",
+    frame: "dark",
     client: "Women's Football Awards",
     tagline: "The home of women's football recognition.",
     title: "A new website for Europe's biggest awards event in women's football.",
@@ -84,6 +89,7 @@ export const work: WorkItem[] = [
   },
   {
     slug: "blast-social",
+    frame: "light",
     client: "Blast Social",
     tagline: "Events that match your lifestyle.",
     title: "A mobile app for discovering and booking social events in London.",
@@ -104,6 +110,7 @@ export const work: WorkItem[] = [
   },
   {
     slug: "dont-forget-me",
+    frame: "dark",
     client: "Don't Forget Me",
     tagline: "Your life story, preserved forever.",
     title: "A digital memory companion for a lifetime of moments.",
@@ -126,6 +133,7 @@ export const work: WorkItem[] = [
   },
   {
     slug: "rockliving",
+    frame: "dark",
     client: "Rockliving",
     title: "A new digital home for a UK proptech and investment company.",
     summary:
@@ -148,6 +156,7 @@ export const work: WorkItem[] = [
   },
   {
     slug: "static-devices",
+    frame: "dark",
     client: "Static Devices",
     title: "Growing ecommerce performance through digital + marketing.",
     summary:
